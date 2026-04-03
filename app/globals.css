@@ -1,0 +1,36 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --color-primary: #2b1300;
+  --color-primary-container: #492400;
+  --color-secondary: #3e5f92;
+  --color-secondary-container: #a5c5ff;
+  --color-tertiary-fixed: #ffdea3;
+  --color-surface: #f9f9fd;
+  --color-surface-low: #f3f3f7;
+  --color-surface-lowest: #ffffff;
+  --color-on-surface-variant: #43474f;
+  --color-on-tertiary-fixed-variant: #5d4200;
+  --color-outline-variant: #c3c6d0;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-[#191c1e];
+  }
+}
+
+.bg-architectural-grid {
+  background-image: radial-gradient(circle, #c3c6d0 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.15;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
