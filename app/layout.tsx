@@ -14,8 +14,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'PrecisionPaint - Calculadora de Pintura',
-  description: 'Calcule seu orçamento de pintura em segundos com precisão profissional.',
+  title: 'Pintor PRO Calc',
+  description: 'Calculadora de orçamento de pintura profissional com precisão arquitetônica.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
