@@ -11,7 +11,7 @@ import { PRODUCT_CATALOG } from '@/constants/catalog';
 
 export default function HistoryPage() {
   const router = useRouter();
-  const { history, appointments, deleteAppointment } = useEstimate();
+  const { history, appointments, deleteAppointment, setCurrentEstimate } = useEstimate();
   const [activeTab, setActiveTab] = useState<'estimates' | 'appointments'>('estimates');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingApp, setViewingApp] = useState<Appointment | null>(null);
@@ -22,7 +22,12 @@ export default function HistoryPage() {
   }, []);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    return new Intl.NumberFormat('pt-BR', { 
+      style: 'currency', 
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
   };
 
   const filteredHistory = history.filter(est => 
@@ -50,8 +55,8 @@ export default function HistoryPage() {
   const totalPendente = history.filter(est => est.status === 'Aguardando').reduce((acc, est) => acc + (est.totalCost || 0), 0);
 
   return (
-    <div className="min-h-screen bg-[#f9f9fd] text-[#191c1e] pb-32">
-      <header className="w-full top-0 sticky bg-[#f9f9fd] z-40">
+    <div className="min-h-screen bg-[#f0f2f5] text-[#191c1e] pb-32">
+      <header className="w-full top-0 sticky bg-[#f0f2f5] z-40">
         <div className="flex items-center justify-between px-6 py-4 w-full max-w-md mx-auto">
           <div className="flex items-center gap-4">
             <button className="active:scale-95 duration-150 p-2 hover:bg-[#e7e8eb] transition-colors rounded-full">
@@ -130,7 +135,13 @@ export default function HistoryPage() {
                         transition={{ delay: idx * 0.05 }}
                         className={`bg-white p-5 rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-shadow duration-300 group relative ${est.status === 'Cancelado' ? 'border-l-4 border-red-600' : ''}`}
                       >
-                        <div className="flex justify-between items-start">
+                        <div 
+                          className="flex justify-between items-start cursor-pointer"
+                          onClick={() => {
+                            setCurrentEstimate(est);
+                            router.push('/results');
+                          }}
+                        >
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="font-bold text-lg text-[#191c1e]">{est.title}</h3>
@@ -393,7 +404,7 @@ export default function HistoryPage() {
                     <div className="p-4 bg-surface-container-low rounded-2xl">
                       <div className="flex items-center gap-2 mb-2">
                         <FileText size={18} className="text-primary" />
-                        <p className="text-[10px] font-bold text-on-surface-variant uppercase">Observações</p>
+                        <p className="text-[10px] font-bold text-on-surface-variant uppercase">Informações Complementares</p>
                       </div>
                       <p className="text-sm text-on-surface-variant leading-relaxed italic">
                         &quot;{viewingApp.notes}&quot;

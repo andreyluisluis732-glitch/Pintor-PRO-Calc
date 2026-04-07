@@ -14,7 +14,8 @@ import {
   deleteDoc, 
   doc, 
   serverTimestamp,
-  getDocFromServer
+  getDocFromServer,
+  limit
 } from 'firebase/firestore';
 
 export type PropertyType = 'Casa' | 'Apartamento' | 'Prédio' | 'Galpão' | 'Condomínio' | 'Comercial';
@@ -32,6 +33,8 @@ export interface Appointment {
   status: 'Pendente' | 'Confirmado' | 'Cancelado';
 }
 
+export type PricingType = 'm2' | 'empreitada' | 'diaria' | 'ambiente' | 'especifico' | 'completo';
+
 export interface Estimate {
   id: string;
   uid: string;
@@ -44,10 +47,12 @@ export interface Estimate {
   location?: string;
   includePaint: boolean;
   area: number;
-  productId: string;
+  productId?: string;
   color?: string;
   coats: number;
+  pricingType: PricingType;
   pricePerM2?: number;
+  fixedPrice?: number;
   totalLiters: number;
   packageSize: 'liter' | 'can' | 'bucket';
   packageCount: number;
@@ -56,6 +61,8 @@ export interface Estimate {
   totalCost: number;
   date: string;
   status: 'Finalizado' | 'Aguardando' | 'Cancelado';
+  mediaUrls?: string[];
+  notes?: string;
 }
 
 enum OperationType {
@@ -116,7 +123,17 @@ interface EstimateContextType {
   setCurrentEstimate: (estimate: Partial<Estimate>) => void;
   history: Estimate[];
   appointments: Appointment[];
-  saveEstimate: (estimate: Omit<Estimate, 'id' | 'uid'>) => Promise<void>;
+  businessPhone: string;
+  laborPricePerM2: number;
+  defaultPrices: Record<PricingType, number>;
+  setBusinessPhone: (phone: string) => Promise<void>;
+  updateSettings: (settings: { 
+    businessPhone?: string; 
+    laborPricePerM2?: number;
+    defaultPrices?: Record<PricingType, number>;
+  }) => Promise<void>;
+  saveEstimate: (estimate: Omit<Estimate, 'id' | 'uid'>) => Promise<string | undefined>;
+  getEstimateById: (id: string) => Promise<Estimate | null>;
   saveAppointment: (appointment: Omit<Appointment, 'id' | 'uid'>) => Promise<void>;
   updateAppointment: (appointment: Appointment) => Promise<void>;
   deleteAppointment: (id: string) => Promise<void>;
@@ -129,11 +146,15 @@ interface EstimateContextType {
     location?: string;
     includePaint: boolean;
     area: number; 
-    productId: string; 
+    productId?: string; 
     color?: string;
     packageSize: 'liter' | 'can' | 'bucket';
     coats: number; 
-    pricePerM2?: number 
+    pricingType: PricingType;
+    pricePerM2?: number;
+    fixedPrice?: number;
+    mediaUrls?: string[];
+    notes?: string;
   }) => void;
 }
 
@@ -145,6 +166,17 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const [currentEstimate, setCurrentEstimate] = useState<Partial<Estimate>>({});
   const [history, setHistory] = useState<Estimate[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [businessPhone, setBusinessPhoneState] = useState<string>('');
+  const [laborPricePerM2, setLaborPricePerM2] = useState<number>(20);
+  const [defaultPrices, setDefaultPrices] = useState<Record<PricingType, number>>({
+    m2: 20,
+    empreitada: 0,
+    diaria: 150,
+    ambiente: 300,
+    especifico: 0,
+    completo: 0
+  });
+  const [professionalUid, setProfessionalUid] = useState<string | null>(null);
 
   // Test connection
   useEffect(() => {
@@ -171,53 +203,126 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
 
   // Firestore sync
   useEffect(() => {
-    if (!user) {
+    let unsubEstimates = () => {};
+    let unsubAppointments = () => {};
+    let unsubSettings = () => {};
+
+    if (user) {
+      const estimatesQuery = query(collection(db, 'estimates'), where('uid', '==', user.uid));
+      unsubEstimates = onSnapshot(estimatesQuery, (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Estimate));
+        setHistory(data.sort((a, b) => b.date.localeCompare(a.date)));
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'estimates');
+      });
+
+      const appointmentsQuery = query(collection(db, 'appointments'), where('uid', '==', user.uid));
+      unsubAppointments = onSnapshot(appointmentsQuery, (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment));
+        setAppointments(data);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'appointments');
+      });
+
+      unsubSettings = onSnapshot(doc(db, 'settings', user.uid), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setBusinessPhoneState(data.businessPhone || '');
+          setLaborPricePerM2(data.laborPricePerM2 || 20);
+          if (data.defaultPrices) {
+            setDefaultPrices(prev => ({ ...prev, ...data.defaultPrices }));
+          }
+          setProfessionalUid(user.uid);
+        }
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, `settings/${user.uid}`);
+      });
+    } else {
       setHistory([]);
       setAppointments([]);
-      return;
+      
+      // For guest users, try to find the first settings document (the professional's)
+      const settingsQuery = query(collection(db, 'settings'), limit(1));
+      unsubSettings = onSnapshot(settingsQuery, (snapshot) => {
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data();
+          setBusinessPhoneState(data.businessPhone || '');
+          setLaborPricePerM2(data.laborPricePerM2 || 20);
+          if (data.defaultPrices) {
+            setDefaultPrices(prev => ({ ...prev, ...data.defaultPrices }));
+          }
+          setProfessionalUid(snapshot.docs[0].id);
+        }
+      }, (error) => {
+        console.warn("Could not fetch professional settings for guest:", error);
+      });
     }
-
-    const estimatesQuery = query(collection(db, 'estimates'), where('uid', '==', user.uid));
-    const unsubEstimates = onSnapshot(estimatesQuery, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Estimate));
-      setHistory(data.sort((a, b) => b.date.localeCompare(a.date)));
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'estimates');
-    });
-
-    const appointmentsQuery = query(collection(db, 'appointments'), where('uid', '==', user.uid));
-    const unsubAppointments = onSnapshot(appointmentsQuery, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment));
-      setAppointments(data);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'appointments');
-    });
 
     return () => {
       unsubEstimates();
       unsubAppointments();
+      unsubSettings();
     };
   }, [user]);
 
-  const saveEstimate = async (estimateData: Omit<Estimate, 'id' | 'uid'>) => {
+  const updateSettings = async (settings: { 
+    businessPhone?: string; 
+    laborPricePerM2?: number;
+    defaultPrices?: Record<PricingType, number>;
+  }) => {
     if (!user) return;
     try {
-      await addDoc(collection(db, 'estimates'), {
-        ...estimateData,
+      const { setDoc } = await import('firebase/firestore');
+      await setDoc(doc(db, 'settings', user.uid), {
+        ...settings,
         uid: user.uid,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `settings/${user.uid}`);
+    }
+  };
+
+  const setBusinessPhone = async (phone: string) => {
+    await updateSettings({ businessPhone: phone });
+  };
+
+  const saveEstimate = async (estimateData: Omit<Estimate, 'id' | 'uid'>) => {
+    try {
+      const docRef = await addDoc(collection(db, 'estimates'), {
+        ...estimateData,
+        uid: user?.uid || 'guest',
         createdAt: serverTimestamp()
       });
+      return docRef.id;
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'estimates');
     }
   };
 
+  const getEstimateById = async (id: string): Promise<Estimate | null> => {
+    try {
+      const docSnap = await getDocFromServer(doc(db, 'estimates', id));
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as Estimate;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching estimate by ID:", error);
+      return null;
+    }
+  };
+
   const saveAppointment = async (appointmentData: Omit<Appointment, 'id' | 'uid'>) => {
-    if (!user) return;
+    const targetUid = user?.uid || professionalUid;
+    if (!targetUid) {
+      console.error("No target UID for appointment");
+      return;
+    }
     try {
       await addDoc(collection(db, 'appointments'), {
         ...appointmentData,
-        uid: user.uid,
+        uid: targetUid,
         createdAt: serverTimestamp()
       });
     } catch (error) {
@@ -256,37 +361,56 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     location?: string;
     includePaint: boolean;
     area: number; 
-    productId: string; 
+    productId?: string; 
     color?: string;
     packageSize: 'liter' | 'can' | 'bucket';
     coats: number; 
-    pricePerM2?: number 
+    pricingType: PricingType;
+    pricePerM2?: number;
+    fixedPrice?: number;
+    mediaUrls?: string[];
+    notes?: string;
   }) => {
-    const { area, productId, coats, pricePerM2, packageSize, includePaint } = data;
+    const { area, productId, coats, pricePerM2, fixedPrice, packageSize, includePaint, pricingType } = data;
     
-    const product = PRODUCT_CATALOG.find(p => p.id === productId) || PRODUCT_CATALOG[0];
-    
-    const totalLiters = (area * coats) / product.yieldPerLiter;
-    
+    let totalLiters = 0;
     let packageCount = 0;
     let materialCost = 0;
 
-    if (packageSize === 'bucket' && product.pricePerBucket) {
-      packageCount = Math.ceil(totalLiters / 18);
-      materialCost = packageCount * product.pricePerBucket;
-    } else if (packageSize === 'can' && product.pricePerCan) {
-      packageCount = Math.ceil(totalLiters / 3.6);
-      materialCost = packageCount * product.pricePerCan;
-    } else {
-      packageCount = Math.ceil(totalLiters);
-      materialCost = packageCount * product.pricePerLiter;
+    if (productId) {
+      const product = PRODUCT_CATALOG.find(p => p.id === productId) || PRODUCT_CATALOG[0];
+      totalLiters = (area * coats) / product.yieldPerLiter;
+      
+      if (packageSize === 'bucket' && product.pricePerBucket) {
+        packageCount = Math.ceil(totalLiters / 18);
+        materialCost = packageCount * product.pricePerBucket;
+      } else if (packageSize === 'can' && product.pricePerCan) {
+        packageCount = Math.ceil(totalLiters / 3.6);
+        materialCost = packageCount * product.pricePerCan;
+      } else {
+        packageCount = Math.ceil(totalLiters);
+        materialCost = packageCount * product.pricePerLiter;
+      }
     }
 
-    const laborCost = area * (pricePerM2 || 20);
-    const totalCost = includePaint ? (materialCost + laborCost) : laborCost;
+    let laborCost = 0;
+    let finalPricePerM2 = pricePerM2 || laborPricePerM2 || 20;
+
+    if (pricingType === 'm2') {
+      laborCost = area * finalPricePerM2;
+    } else if (pricingType === 'completo') {
+      // Mão de obra + material: fixedPrice is the TOTAL cost
+      const total = fixedPrice || defaultPrices.completo || 0;
+      laborCost = Math.max(0, total - (includePaint ? materialCost : 0));
+    } else {
+      laborCost = fixedPrice || defaultPrices[pricingType] || 0;
+    }
+
+    const totalCost = (includePaint ? materialCost : 0) + laborCost;
 
     setCurrentEstimate({
       ...data,
+      pricePerM2: pricingType === 'm2' ? finalPricePerM2 : undefined,
       title: `Orçamento - ${data.clientName || 'Sem Nome'}`,
       totalLiters: Math.round(totalLiters * 10) / 10,
       packageCount,
@@ -306,7 +430,13 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       setCurrentEstimate, 
       history, 
       appointments,
+      businessPhone,
+      laborPricePerM2,
+      defaultPrices,
+      setBusinessPhone,
+      updateSettings,
       saveEstimate, 
+      getEstimateById,
       saveAppointment,
       updateAppointment,
       deleteAppointment,

@@ -12,9 +12,32 @@ import { PRODUCT_CATALOG } from '@/constants/catalog';
 
 export default function ReviewPage() {
   const router = useRouter();
-  const { currentEstimate, saveEstimate } = useEstimate();
+  const { currentEstimate, saveEstimate, businessPhone } = useEstimate();
+
+  const [shareUrl, setShareUrl] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
 
   const product = PRODUCT_CATALOG.find(p => p.id === currentEstimate.productId) || PRODUCT_CATALOG[0];
+
+  React.useEffect(() => {
+    async function prepareShare() {
+      if (currentEstimate.totalCost && !shareUrl && !saving) {
+        setSaving(true);
+        try {
+          const id = await saveEstimate(currentEstimate as Estimate);
+          if (id) {
+            const baseUrl = window.location.origin;
+            setShareUrl(`${baseUrl}/share/${id}`);
+          }
+        } catch (err) {
+          console.error("Error saving estimate for share:", err);
+        } finally {
+          setSaving(false);
+        }
+      }
+    }
+    prepareShare();
+  }, [currentEstimate, saveEstimate, shareUrl, saving]);
 
   if (!currentEstimate.totalCost) {
     return (
@@ -29,22 +52,14 @@ export default function ReviewPage() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
-  const paintTypeName = {
-    economic: 'Econômica',
-    standard: 'Standard',
-    premium: 'Premium'
-  };
-
-  const handleWhatsApp = async () => {
-    if (!currentEstimate.totalCost) return;
+  const getWhatsAppUrl = () => {
+    if (!currentEstimate.totalCost) return '#';
     
-    // Save to history first
-    await saveEstimate(currentEstimate as Estimate);
-
     const locationParts = [currentEstimate.location, currentEstimate.neighborhood, currentEstimate.city].filter(Boolean);
     const location = locationParts.join(', ');
-    const message = `Olá${currentEstimate.clientName ? ' ' + currentEstimate.clientName : ''}! Segue o orçamento para sua pintura:
-
+    
+    let message = `Olá${currentEstimate.clientName ? ' ' + currentEstimate.clientName : ''}! Segue o orçamento para sua pintura:
+ 
 🏠 Tipo de Imóvel: ${currentEstimate.propertyType || 'Não informado'}
 📍 Local: ${location || 'Não informado'}
 📞 Contato: ${currentEstimate.clientPhone || 'Não informado'}
@@ -58,12 +73,20 @@ export default function ReviewPage() {
 💰 Tinta Inclusa no Valor: ${currentEstimate.includePaint ? 'Sim' : 'Não (A cargo do cliente)'}
 ⏳ Prazo Estimado: 04 dias úteis
 
-VALOR TOTAL DO SERVIÇO: ${formatCurrency(currentEstimate.totalCost || 0)}
+VALOR TOTAL DO SERVIÇO: ${formatCurrency(currentEstimate.totalCost || 0)}`;
 
-Gerado via Pintor PRO Calc`;
+    if (shareUrl) {
+      message += `\n\n🔗 Visualize o orçamento completo aqui:\n${shareUrl}`;
+    }
 
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+    if (currentEstimate.notes) {
+      message += `\n\n📝 Observações: ${currentEstimate.notes}`;
+    }
+
+    message += `\n\nGerado via Pintor PRO Calc`;
+
+    const phone = currentEstimate.clientPhone ? currentEstimate.clientPhone.replace(/\D/g, '') : '';
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   };
 
   return (
@@ -132,6 +155,12 @@ Gerado via Pintor PRO Calc`;
                 <p className="text-[10px] uppercase font-bold text-[#075e54] mb-1">Valor Total do Serviço</p>
                 <p className="text-xl font-black text-[#075e54]">{formatCurrency(currentEstimate.totalCost || 0)}</p>
               </div>
+              {shareUrl && (
+                <div className="bg-white/50 rounded p-2 mb-3 border border-[#128C7E]/10">
+                  <p className="text-[10px] font-bold text-[#128C7E] mb-1">Link do Orçamento</p>
+                  <p className="text-[10px] text-blue-600 truncate">{shareUrl}</p>
+                </div>
+              )}
               <p className="text-xs italic text-on-surface-variant">Gerado via Pintor PRO Calc</p>
               <div className="flex justify-end items-center gap-1 mt-1">
                 <span className="text-[10px] text-on-surface-variant/70">14:20</span>
@@ -153,14 +182,15 @@ Gerado via Pintor PRO Calc`;
           </div>
         </div>
 
-        {/* Action Button */}
-        <button 
-          onClick={handleWhatsApp}
+        <a 
+          href={getWhatsAppUrl()}
+          target="_blank"
+          rel="noopener noreferrer"
           className="w-full bg-gradient-to-b from-[#25D366] to-[#128C7E] text-white flex items-center justify-center gap-3 py-4 rounded-xl font-bold text-lg shadow-lg active:scale-[0.98] transition-all"
         >
           <Send size={20} />
           Enviar no WhatsApp
-        </button>
+        </a>
         <p className="text-center text-[10px] text-on-surface-variant/60 mt-4 uppercase tracking-[0.3em]">
           O cliente receberá uma cópia exata deste texto
         </p>

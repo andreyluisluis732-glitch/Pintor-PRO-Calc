@@ -63,6 +63,18 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "uid", "clientName", "date", "time"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Business settings for the professional",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "businessPhone": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid"]
     }
   },
   "firestore": {
@@ -77,6 +89,10 @@
     "appointments/{appointmentId}": {
       "schema": "Appointment",
       "description": "Scheduled appointments"
+    },
+    "settings/{userId}": {
+      "schema": "Settings",
+      "description": "Business settings"
     }
   }
 }

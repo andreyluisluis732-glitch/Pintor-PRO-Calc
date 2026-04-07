@@ -3,23 +3,28 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Play, Calculator, ClipboardList, BookOpen, Calendar } from 'lucide-react';
+import { Play, Calculator, ClipboardList, BookOpen, Settings, HelpCircle, Calendar as CalendarIcon } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useEstimate } from '@/context/EstimateContext';
 
 const navItems = [
   { name: 'Início', icon: Play, href: '/' },
   { name: 'Calcular', icon: Calculator, href: '/calculate' },
-  { name: 'Agenda', icon: Calendar, href: '/schedule' },
-  { name: 'Histórico', icon: ClipboardList, href: '/history' },
+  { name: 'Agenda', icon: CalendarIcon, href: '/schedule' },
   { name: 'Catálogo', icon: BookOpen, href: '/catalog' },
+  { name: 'Histórico', icon: ClipboardList, href: '/history', professionalOnly: true },
+  { name: 'Ajustes', icon: Settings, href: '/settings', professionalOnly: true },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { user } = useEstimate();
+
+  const visibleItems = navItems.filter(item => !item.professionalOnly || user);
 
   return (
     <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 pb-safe bg-[#3e5f92]/90 backdrop-blur-md z-50 rounded-t-xl border-t border-white/10 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
-      {navItems.map((item) => {
+      {visibleItems.map((item) => {
         const isActive = pathname === item.href;
         return (
           <Link
@@ -36,7 +41,8 @@ export default function BottomNav() {
               {item.name === 'Início' ? 'Início' : 
                item.name === 'Calcular' ? 'Calc' : 
                item.name === 'Agenda' ? 'Agenda' :
-               item.name === 'Histórico' ? 'Histórico' : 'Catálogo'}
+               item.name === 'Catálogo' ? 'Catálogo' :
+               item.name === 'Histórico' ? 'Histórico' : 'Ajustes'}
             </span>
           </Link>
         );

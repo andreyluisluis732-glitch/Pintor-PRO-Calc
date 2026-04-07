@@ -2,15 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar as CalendarIcon, Clock, CheckCircle2, Trash2, Plus, Edit2, Phone, Mail, MapPin, FileText, X, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, Calendar as CalendarIcon, Clock, CheckCircle2, Trash2, Plus, Edit2, Phone, Mail, MapPin, FileText, X, Loader2, HelpCircle, Send, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BottomNav from '@/components/BottomNav';
 import { useEstimate, Appointment } from '@/context/EstimateContext';
 
 export default function SchedulePage() {
   const router = useRouter();
-  const { appointments, saveAppointment, updateAppointment, deleteAppointment, currentEstimate } = useEstimate();
-  const [isAdding, setIsAdding] = useState(false);
+  const { user, appointments, saveAppointment, updateAppointment, deleteAppointment, currentEstimate, businessPhone } = useEstimate();
+  const [isAdding, setIsAdding] = useState(!user);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingApp, setViewingApp] = useState<Appointment | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -18,7 +19,8 @@ export default function SchedulePage() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (!user) setIsAdding(true);
+  }, [user]);
   const [newApp, setNewApp] = useState({
     clientName: '',
     clientPhone: '',
@@ -33,9 +35,65 @@ export default function SchedulePage() {
     '08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'
   ];
 
+  const getWhatsAppUrl = () => {
+    let phone = (user ? newApp.clientPhone : businessPhone).replace(/\D/g, '');
+    if (phone.length >= 10 && !phone.startsWith('55')) {
+      phone = '55' + phone;
+    }
+    
+    const formattedDate = newApp.date.split('-').reverse().join('/');
+    
+    let message = '';
+    if (user) {
+      message = `*Pintor PRO - Agendamento Confirmado*\n\n`;
+      message += `Olá *${newApp.clientName}*, confirmo nossa consulta técnica:\n`;
+      message += `📅 *Data:* ${formattedDate}\n`;
+      message += `⏰ *Horário:* ${newApp.time}\n\n`;
+
+      if (currentEstimate && currentEstimate.totalCost) {
+        message += `*--- Resumo do Orçamento ---*\n`;
+        message += `🏠 *Imóvel:* ${currentEstimate.propertyType || 'Não informado'}\n`;
+        message += `📏 *Área:* ${currentEstimate.area}m²\n`;
+        message += `🎨 *Cor:* ${currentEstimate.color || 'A definir'}\n`;
+        
+        if (currentEstimate.includePaint) {
+          message += `📦 *Material:* Incluso (${currentEstimate.packageCount} un)\n`;
+        } else {
+          message += `📦 *Material:* Por conta do cliente\n`;
+        }
+        
+        message += `💰 *Valor Estimado:* R$ ${currentEstimate.totalCost.toLocaleString('pt-BR')}\n\n`;
+        message += `_Estarei aí para validar os detalhes e fechar o serviço!_`;
+      } else {
+        message += `Estarei no local para realizar a medição e passar o orçamento detalhado.`;
+      }
+    } else {
+      message = `*Pintor PRO - Novo Agendamento de Consulta*\n\n`;
+      message += `Olá! Gostaria de agendar uma consulta técnica:\n\n`;
+      message += `👤 *Cliente:* ${newApp.clientName}\n`;
+      message += `📞 *WhatsApp:* ${newApp.clientPhone}\n`;
+      if (newApp.clientEmail) {
+        message += `📧 *E-mail:* ${newApp.clientEmail}\n`;
+      }
+      message += `📅 *Data:* ${formattedDate}\n`;
+      message += `⏰ *Horário:* ${newApp.time}\n`;
+      message += `📍 *Endereço:* ${newApp.clientAddress || 'Não informado'}\n\n`;
+      if (newApp.notes) {
+        message += `📝 *Informações Complementares:* ${newApp.notes}\n\n`;
+      }
+      message += `_Aguardando sua confirmação!_`;
+    }
+
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  };
+
+  const [savedWhatsAppUrl, setSavedWhatsAppUrl] = useState<string | null>(null);
+
   const handleSave = async () => {
     if (!newApp.clientName || !newApp.clientPhone) return;
     
+    const whatsappUrl = getWhatsAppUrl();
+
     if (editingId) {
       // Find the existing appointment to get its uid
       const existingApp = appointments.find(a => a.id === editingId);
@@ -56,49 +114,15 @@ export default function SchedulePage() {
       };
       await saveAppointment(appointmentData);
     }
-
-    // WhatsApp Redirection Logic
-    let phone = newApp.clientPhone.replace(/\D/g, '');
-    // If it doesn't start with 55 and has 10 or 11 digits, add 55
-    if (phone.length >= 10 && !phone.startsWith('55')) {
-      phone = '55' + phone;
-    }
-    
-    const formattedDate = newApp.date.split('-').reverse().join('/');
-    
-    let message = `*Pintor PRO - Agendamento Confirmado*\n\n`;
-    message += `Olá *${newApp.clientName}*, confirmo nossa consulta técnica:\n`;
-    message += `📅 *Data:* ${formattedDate}\n`;
-    message += `⏰ *Horário:* ${newApp.time}\n\n`;
-
-    if (currentEstimate && currentEstimate.totalCost) {
-      message += `*--- Resumo do Orçamento ---*\n`;
-      message += `🏠 *Imóvel:* ${currentEstimate.propertyType || 'Não informado'}\n`;
-      message += `📏 *Área:* ${currentEstimate.area}m²\n`;
-      message += `🎨 *Cor:* ${currentEstimate.color || 'A definir'}\n`;
-      
-      if (currentEstimate.includePaint) {
-        message += `📦 *Material:* Incluso (${currentEstimate.packageCount} un)\n`;
-      } else {
-        message += `📦 *Material:* Por conta do cliente\n`;
-      }
-      
-      message += `💰 *Valor Estimado:* R$ ${currentEstimate.totalCost.toLocaleString('pt-BR')}\n\n`;
-      message += `_Estarei aí para validar os detalhes e fechar o serviço!_`;
-    } else {
-      message += `Estarei no local para realizar a medição e passar o orçamento detalhado.`;
-    }
-
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
     
     setIsAdding(false);
+    setSavedWhatsAppUrl(whatsappUrl);
     setShowSuccess(true);
     
-    // Open WhatsApp
-    window.open(whatsappUrl, '_blank');
-
-    setTimeout(() => setShowSuccess(false), 3000);
+    setTimeout(() => {
+      setShowSuccess(false);
+      setSavedWhatsAppUrl(null);
+    }, 15000); // Show for 15 seconds
     
     setNewApp({
       clientName: '',
@@ -151,8 +175,8 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f9f9fd] text-[#191c1e] pb-32">
-      <header className="w-full top-0 sticky bg-[#f9f9fd] z-40">
+    <div className="min-h-screen bg-[#f0f2f5] text-[#191c1e] pb-32">
+      <header className="w-full top-0 sticky bg-[#f0f2f5] z-40">
         <div className="flex items-center justify-between px-6 py-4 w-full max-w-md mx-auto">
           <div className="flex items-center gap-4">
             <button 
@@ -161,36 +185,72 @@ export default function SchedulePage() {
             >
               <ArrowLeft size={24} className="text-[#002D5E]" />
             </button>
-            <h1 className="text-xl font-bold text-[#002D5E]">Agenda do Consultor</h1>
+            <h1 className="text-xl font-bold text-[#002D5E]">
+              {user ? 'Agenda do Consultor' : 'Solicitar Consulta'}
+            </h1>
           </div>
-          <button 
-            onClick={() => setIsAdding(true)}
-            className="p-2 bg-primary text-white rounded-full shadow-md active:scale-90 transition-transform"
-          >
-            <Plus size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <Link href="/help" className="p-2 text-[#002D5E] hover:bg-[#e7e8eb] rounded-full transition-colors">
+              <HelpCircle size={24} />
+            </Link>
+            {user && (
+              <button 
+                onClick={() => setIsAdding(true)}
+                className="p-2 bg-primary text-white rounded-full shadow-md active:scale-90 transition-transform"
+              >
+                <Plus size={20} />
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
       <main className="max-w-md mx-auto px-6 pt-4">
-        <section className="mb-8 bg-[#002D5E] p-6 rounded-3xl text-white shadow-xl">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold uppercase tracking-widest opacity-80">Hoje</h2>
-            <CalendarIcon size={20} className="opacity-80" />
-          </div>
-          <div className="text-3xl font-black mb-1">{todayAppointments.length}</div>
-          <p className="text-xs font-medium opacity-70">Consultas agendadas para hoje</p>
-        </section>
+        {user && (
+          <section className="mb-8 bg-[#002D5E] p-6 rounded-3xl text-white shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold uppercase tracking-widest opacity-80">Hoje</h2>
+              <CalendarIcon size={20} className="opacity-80" />
+            </div>
+            <div className="text-3xl font-black mb-1">{todayAppointments.length}</div>
+            <p className="text-xs font-medium opacity-70">Consultas agendadas para hoje</p>
+          </section>
+        )}
         <AnimatePresence>
           {showSuccess && (
             <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="bg-green-100 text-green-800 p-4 rounded-xl mb-6 flex items-center gap-3 font-bold text-sm shadow-sm"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="fixed inset-x-4 top-24 z-50"
             >
-              <CheckCircle2 size={20} />
-              Consulta agendada com sucesso!
+              <div className="bg-[#25D366] text-white p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="bg-white/20 p-2 rounded-full">
+                    <CheckCircle2 size={24} />
+                  </div>
+                  <span className="font-bold text-lg">Agendamento Salvo!</span>
+                </div>
+                
+                {savedWhatsAppUrl && (
+                  <a 
+                    href={savedWhatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-white text-[#128C7E] py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md active:scale-95 transition-transform"
+                  >
+                    <Send size={18} />
+                    Confirmar no WhatsApp
+                  </a>
+                )}
+                
+                <button 
+                  onClick={() => setShowSuccess(false)}
+                  className="text-white/80 text-sm underline"
+                >
+                  Fechar
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -245,7 +305,7 @@ export default function SchedulePage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase">Observações</label>
+                  <label className="text-xs font-bold text-on-surface-variant uppercase">Informações Complementares</label>
                   <textarea 
                     className="w-full p-4 bg-surface-container-highest rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all min-h-[80px]"
                     placeholder="Detalhes sobre o serviço..."
@@ -327,128 +387,132 @@ export default function SchedulePage() {
           )}
         </AnimatePresence>
 
-        <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-on-surface-variant uppercase tracking-widest">Próximas Consultas</h2>
-            <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-1 rounded-full">{appointments.length} Agendadas</span>
-          </div>
+        {user && (
+          <section className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-on-surface-variant uppercase tracking-widest">Próximas Consultas</h2>
+              <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-1 rounded-full">{appointments.length} Agendadas</span>
+            </div>
 
-          <div className="space-y-4">
-            {appointments.length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-2xl border-2 border-dashed border-outline-variant/30 text-on-surface-variant">
-                <CalendarIcon size={48} className="mx-auto mb-4 opacity-20" />
-                <p className="font-medium">Nenhuma consulta agendada.</p>
-                <button 
-                  onClick={() => setIsAdding(true)}
-                  className="mt-4 text-primary font-bold text-sm"
-                >
-                  Agendar minha primeira consulta
-                </button>
-              </div>
-            ) : (
-                appointments.map((app, idx) => {
-                  let dateObj = new Date();
-                  if (app.date) {
-                    const parts = app.date.split('-');
-                    if (parts.length === 3) {
-                      dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-                    } else {
-                      const d = new Date(app.date);
-                      if (!isNaN(d.getTime())) dateObj = d;
+            <div className="space-y-4">
+              {appointments.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-2xl border-2 border-dashed border-outline-variant/30 text-on-surface-variant">
+                  <CalendarIcon size={48} className="mx-auto mb-4 opacity-20" />
+                  <p className="font-medium">Nenhuma consulta agendada.</p>
+                  <button 
+                    onClick={() => setIsAdding(true)}
+                    className="mt-4 text-primary font-bold text-sm"
+                  >
+                    Agendar minha primeira consulta
+                  </button>
+                </div>
+              ) : (
+                  appointments.map((app, idx) => {
+                    let dateObj = new Date();
+                    if (app.date) {
+                      const parts = app.date.split('-');
+                      if (parts.length === 3) {
+                        dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+                      } else {
+                        const d = new Date(app.date);
+                        if (!isNaN(d.getTime())) dateObj = d;
+                      }
                     }
-                  }
-                  
-                  const monthName = dateObj.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
-                  const dayNum = dateObj.getDate();
+                    
+                    const monthName = dateObj.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+                    const dayNum = dateObj.getDate();
 
-                  return (
-                    <motion.div 
-                      key={app.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.1 }}
-                      className="bg-white p-5 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between group cursor-pointer active:bg-surface-container-low transition-colors"
-                      onClick={() => setViewingApp(app)}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-primary/5 flex flex-col items-center justify-center text-primary">
-                          <span className="text-[10px] font-black uppercase leading-none">{monthName}</span>
-                          <span className="text-lg font-black leading-none">{dayNum}</span>
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-[#191c1e]">{app.clientName}</h3>
-                          <div className="flex flex-col gap-1 mt-1">
-                            <div className="flex items-center gap-3 text-xs text-on-surface-variant font-medium">
-                              <span className="flex items-center gap-1">
-                                <Clock size={12} />
-                                {app.time}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <CheckCircle2 size={12} className="text-green-600" />
-                                {app.status}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-primary font-bold">
-                              <span className="flex items-center gap-1">
-                                <Phone size={12} />
-                                {app.clientPhone}
-                              </span>
-                              <a 
-                                href={`https://wa.me/${app.clientPhone.replace(/\D/g, '')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-green-500 text-white px-2 py-0.5 rounded text-[10px] hover:bg-green-600 transition-colors"
-                              >
-                                WhatsApp
-                              </a>
+                    return (
+                      <motion.div 
+                        key={app.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="bg-white p-5 rounded-2xl shadow-sm border border-outline-variant/10 flex items-center justify-between group cursor-pointer active:bg-surface-container-low transition-colors"
+                        onClick={() => setViewingApp(app)}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-primary/5 flex flex-col items-center justify-center text-primary">
+                            <span className="text-[10px] font-black uppercase leading-none">{monthName}</span>
+                            <span className="text-lg font-black leading-none">{dayNum}</span>
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-[#191c1e]">{app.clientName}</h3>
+                            <div className="flex flex-col gap-1 mt-1">
+                              <div className="flex items-center gap-3 text-xs text-on-surface-variant font-medium">
+                                <span className="flex items-center gap-1">
+                                  <Clock size={12} />
+                                  {app.time}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <CheckCircle2 size={12} className="text-green-600" />
+                                  {app.status}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-primary font-bold">
+                                <span className="flex items-center gap-1">
+                                  <Phone size={12} />
+                                  {app.clientPhone}
+                                </span>
+                                <a 
+                                  href={`https://wa.me/${app.clientPhone.replace(/\D/g, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="bg-green-500 text-white px-2 py-0.5 rounded text-[10px] hover:bg-green-600 transition-colors"
+                                >
+                                  WhatsApp
+                                </a>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(app);
-                          }}
-                          className="p-2 text-primary hover:bg-primary/5 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteAppointment(app.id);
-                          }}
-                          className="p-2 text-on-surface-variant hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </motion.div>
-                  );
-                })
-            )}
-          </div>
-        </section>
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(app);
+                            }}
+                            className="p-2 text-primary hover:bg-primary/5 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteAppointment(app.id);
+                            }}
+                            className="p-2 text-on-surface-variant hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    );
+                  })
+              )}
+            </div>
+          </section>
+        )}
 
-        <section className="mt-12 bg-primary/5 p-6 rounded-3xl border border-primary/10">
-          <h3 className="text-sm font-bold text-primary uppercase tracking-widest mb-4">Dicas para Negociação</h3>
-          <ul className="space-y-3 text-sm text-on-surface-variant font-medium">
-            <li className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-              Prepare fotos de referência de trabalhos anteriores.
-            </li>
-            <li className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-              Explique a diferença entre os tipos de tinta (Econômica vs Premium).
-            </li>
-            <li className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-              Tenha o orçamento detalhado em mãos durante a chamada.
-            </li>
-          </ul>
-        </section>
+        {user && (
+          <section className="mt-12 bg-primary/5 p-6 rounded-3xl border border-primary/10">
+            <h3 className="text-sm font-bold text-primary uppercase tracking-widest mb-4">Dicas para Negociação</h3>
+            <ul className="space-y-3 text-sm text-on-surface-variant font-medium">
+              <li className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                Prepare fotos de referência de trabalhos anteriores.
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                Explique a diferença entre os tipos de tinta (Econômica vs Premium).
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                Tenha o orçamento detalhado em mãos durante a chamada.
+              </li>
+            </ul>
+          </section>
+        )}
       </main>
 
       {/* Details Modal */}
@@ -538,7 +602,7 @@ export default function SchedulePage() {
                     <div className="p-4 bg-surface-container-low rounded-2xl">
                       <div className="flex items-center gap-2 mb-2">
                         <FileText size={18} className="text-primary" />
-                        <p className="text-[10px] font-bold text-on-surface-variant uppercase">Observações</p>
+                        <p className="text-[10px] font-bold text-on-surface-variant uppercase">Informações Complementares</p>
                       </div>
                       <p className="text-sm text-on-surface-variant leading-relaxed italic">
                         &quot;{viewingApp.notes}&quot;
@@ -577,7 +641,7 @@ export default function SchedulePage() {
         )}
       </AnimatePresence>
 
-      <BottomNav />
+      {user && <BottomNav />}
     </div>
   );
 }

@@ -12,9 +12,41 @@ import { PRODUCT_CATALOG } from '@/constants/catalog';
 
 export default function ResultsPage() {
   const router = useRouter();
-  const { currentEstimate, saveEstimate } = useEstimate();
+  const { currentEstimate, saveEstimate, user, businessPhone } = useEstimate();
+
+  const pricingLabels: Record<string, string> = {
+    m2: 'Por metro quadrado (m²)',
+    empreitada: 'Por empreitada (obra fechada)',
+    diaria: 'Por diária',
+    ambiente: 'Por ambiente / cômodo',
+    especifico: 'Por serviço específico',
+    completo: 'Mão de obra + material'
+  };
+
+  const [shareUrl, setShareUrl] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
 
   const product = PRODUCT_CATALOG.find(p => p.id === currentEstimate.productId) || PRODUCT_CATALOG[0];
+
+  React.useEffect(() => {
+    async function prepareShare() {
+      if (!user && currentEstimate.totalCost && !shareUrl && !saving) {
+        setSaving(true);
+        try {
+          const id = await saveEstimate(currentEstimate as any);
+          if (id) {
+            const baseUrl = window.location.origin;
+            setShareUrl(`${baseUrl}/share/${id}`);
+          }
+        } catch (err) {
+          console.error("Error saving estimate for guest share:", err);
+        } finally {
+          setSaving(false);
+        }
+      }
+    }
+    prepareShare();
+  }, [currentEstimate, saveEstimate, shareUrl, saving, user]);
 
   if (!currentEstimate.totalCost) {
     return (
@@ -24,6 +56,57 @@ export default function ResultsPage() {
       </div>
     );
   }
+
+  const getWhatsAppUrl = () => {
+    if (!businessPhone) return '#';
+
+    const locationParts = [currentEstimate.location, currentEstimate.neighborhood, currentEstimate.city].filter(Boolean);
+    const location = locationParts.join(', ');
+    
+    let phone = businessPhone.replace(/\D/g, '');
+    if (phone.length >= 10 && !phone.startsWith('55')) {
+      phone = '55' + phone;
+    }
+
+    let message = `*ORÇAMENTO DE PINTURA - PINTOR PRO CALC*\n\n`;
+    message += `Olá! Gostaria de solicitar uma análise para o seguinte orçamento gerado no app:\n\n`;
+    
+    if (currentEstimate.clientName) message += `👤 *Cliente:* ${currentEstimate.clientName}\n`;
+    if (currentEstimate.clientPhone) message += `📞 *Contato:* ${currentEstimate.clientPhone}\n`;
+    
+    message += `🏠 *Tipo de Imóvel:* ${currentEstimate.propertyType || 'Não informado'}\n`;
+    message += `📍 *Localização:* ${location || 'Não informado'}\n`;
+    message += `📐 *Área do Imóvel:* ${currentEstimate.area}m²\n`;
+    
+    message += `💰 *Forma de Cobrança:* ${currentEstimate.pricingType ? pricingLabels[currentEstimate.pricingType] : 'Não informado'}\n`;
+    if (currentEstimate.pricingType === 'm2') {
+      message += `💵 *Valor por m²:* ${formatCurrency(currentEstimate.pricePerM2 || 0)}\n`;
+    }
+    
+    if (currentEstimate.productId && currentEstimate.includePaint) {
+      message += `🧴 *Tinta Selecionada:* ${product.name}${currentEstimate.color ? ` (Cor: ${currentEstimate.color})` : ''}\n`;
+      message += `📦 *Quantidade:* ${currentEstimate.packageCount} ${
+        currentEstimate.packageSize === 'bucket' ? 'Balde(s)' : 
+        currentEstimate.packageSize === 'can' ? 'Lata(s)' : 'Litro(s)'
+      } (Padrão: 2 demãos)\n`;
+    } else {
+      message += `🛠️ *Serviço:* Apenas Mão de Obra (Material não incluso)\n`;
+    }
+    
+    message += `\n✅ *VALOR TOTAL ESTIMADO:* ${formatCurrency(currentEstimate.totalCost || 0)}\n`;
+
+    if (shareUrl) {
+      message += `\n🔗 *Link do Orçamento:* ${shareUrl}\n`;
+    }
+
+    if (currentEstimate.notes) {
+      message += `\n📝 *Observações:* ${currentEstimate.notes}`;
+    }
+
+    message += `\n\n_Gerado com precisão via Pintor PRO Calc_`;
+
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  };
 
   const handleSave = () => {
     saveEstimate({
@@ -37,13 +120,18 @@ export default function ResultsPage() {
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    return new Intl.NumberFormat('pt-BR', { 
+      style: 'currency', 
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
   };
 
   return (
-    <div className="min-h-screen bg-surface text-on-surface pb-24">
+    <div className="min-h-screen bg-[#f0f2f5] text-on-surface pb-24">
       {/* Top Navigation Anchor */}
-      <header className="w-full top-0 sticky z-40 bg-[#f9f9fd] shadow-none">
+      <header className="w-full top-0 sticky z-40 bg-[#f0f2f5] shadow-none">
         <div className="flex items-center justify-between px-6 py-4 w-full max-w-md mx-auto">
           <div className="flex items-center gap-4">
             <button 
@@ -90,56 +178,54 @@ export default function ResultsPage() {
         {/* Detailed Breakdown Grid */}
         <div className="grid grid-cols-1 gap-4">
           {/* Item: Material */}
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className={`p-5 rounded-xl flex items-center justify-between shadow-sm ${
-              currentEstimate.includePaint ? 'bg-white' : 'bg-surface-container-low border border-outline-variant/20'
-            }`}
-          >
-            <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                currentEstimate.includePaint ? 'bg-surface-low text-secondary' : 'bg-surface-container-highest text-on-surface-variant opacity-60'
-              }`}>
-                <Paintbrush size={24} />
-              </div>
-              <div>
-                <p className="text-on-surface-variant text-xs font-bold tracking-wider uppercase">Material Estimado</p>
-                <p className={`font-semibold ${currentEstimate.includePaint ? 'text-[#191c1e]' : 'text-on-surface-variant'}`}>
-                  {product.name} ({currentEstimate.packageCount} {
-                    currentEstimate.packageSize === 'bucket' ? 'Balde(s)' : 
-                    currentEstimate.packageSize === 'can' ? 'Lata(s)' : 'Litro(s)'
-                  })
-                </p>
-                <p className="text-on-surface-variant text-[10px] font-medium">Total: {currentEstimate.totalLiters}L necessários</p>
-                {!currentEstimate.includePaint && (
-                  <p className="text-secondary text-[10px] font-bold uppercase tracking-tighter mt-1 italic">Material por conta do cliente</p>
-                )}
-                {currentEstimate.color && (
-                  <div className="mt-3 p-2 bg-primary/5 rounded-xl border border-primary/10 flex items-center gap-3">
-                    <span 
-                      className="w-8 h-8 rounded-lg border border-black/10 shadow-sm inline-block" 
-                      style={{ backgroundColor: product.colors.find(c => c.name === currentEstimate.color)?.hex || '#ccc' }}
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest leading-none mb-1">Cor Selecionada</span>
-                      <span className={`text-sm font-black uppercase leading-none ${currentEstimate.includePaint ? 'text-primary' : 'text-on-surface-variant'}`}>{currentEstimate.color}</span>
+          {currentEstimate.includePaint && (
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="p-5 rounded-xl flex items-center justify-between shadow-sm bg-white"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-surface-low text-secondary">
+                  <Paintbrush size={24} />
+                </div>
+                <div>
+                  <p className="text-on-surface-variant text-xs font-bold tracking-wider uppercase">Material Estimado</p>
+                  <p className="font-semibold text-[#191c1e]">
+                    {currentEstimate.productId ? (
+                      `${product.name} (${currentEstimate.packageCount} ${
+                        currentEstimate.packageSize === 'bucket' ? 'Balde(s)' : 
+                        currentEstimate.packageSize === 'can' ? 'Lata(s)' : 'Litro(s)'
+                      })`
+                    ) : (
+                      'Não especificado'
+                    )}
+                  </p>
+                  {currentEstimate.productId && (
+                    <p className="text-on-surface-variant text-[10px] font-medium">Total: {currentEstimate.totalLiters}L necessários</p>
+                  )}
+                  {currentEstimate.color && (
+                    <div className="mt-3 p-2 bg-primary/5 rounded-xl border border-primary/10 flex items-center gap-3">
+                      <span 
+                        className="w-8 h-8 rounded-lg border border-black/10 shadow-sm inline-block" 
+                        style={{ backgroundColor: product.colors.find(c => c.name === currentEstimate.color)?.hex || '#ccc' }}
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest leading-none mb-1">Cor Selecionada</span>
+                        <span className="text-sm font-black uppercase leading-none text-primary">{currentEstimate.color}</span>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="text-right">
-              <p className="text-on-surface-variant text-[10px] font-bold uppercase">Subtotal</p>
-              <p className={`font-black ${currentEstimate.includePaint ? 'text-[#191c1e]' : 'text-on-surface-variant opacity-50 line-through'}`}>
-                {formatCurrency(currentEstimate.materialCost || 0)}
-              </p>
-              {!currentEstimate.includePaint && (
-                <p className="text-[10px] font-black text-secondary">R$ 0,00</p>
-              )}
-            </div>
-          </motion.div>
+              <div className="text-right">
+                <p className="text-on-surface-variant text-[10px] font-bold uppercase">Subtotal</p>
+                <p className="font-black text-[#191c1e]">
+                  {formatCurrency(currentEstimate.materialCost || 0)}
+                </p>
+              </div>
+            </motion.div>
+          )}
 
           {/* Item: Labor */}
           <motion.div 
@@ -196,40 +282,54 @@ export default function ResultsPage() {
                 </span>
               </div>
             )}
+            {currentEstimate.includePaint && (
+              <>
+                <div className="flex justify-between items-center pb-2 border-b border-outline-variant/10">
+                  <span className="text-on-surface-variant text-sm">Produto</span>
+                  <span className="text-[#191c1e] font-bold text-sm text-right">
+                    {currentEstimate.productId ? `${product.name} (${product.finish})` : 'Não especificado'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b border-outline-variant/10">
+                  <span className="text-on-surface-variant text-sm">Embalagem Escolhida</span>
+                  <span className="text-[#191c1e] font-bold text-sm uppercase">
+                    {currentEstimate.packageSize === 'bucket' ? 'Balde 18L' : 
+                     currentEstimate.packageSize === 'can' ? 'Lata 3.6L' : 'Litro'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b border-outline-variant/10">
+                  <span className="text-on-surface-variant text-sm">Quantidade</span>
+                  <span className="text-[#191c1e] font-bold text-sm">
+                    {currentEstimate.packageCount} {
+                      currentEstimate.packageSize === 'bucket' ? 'Balde(s)' : 
+                      currentEstimate.packageSize === 'can' ? 'Lata(s)' : 'Litro(s)'
+                    }
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b border-outline-variant/10">
+                  <span className="text-on-surface-variant text-sm">Rendimento</span>
+                  <span className="bg-tertiary-fixed text-on-tertiary-fixed-variant px-2 py-0.5 rounded text-xs font-bold tracking-tighter">
+                    1L = {product.yieldPerLiter}m² (Cálculo p/ 2 demãos)
+                  </span>
+                </div>
+              </>
+            )}
             <div className="flex justify-between items-center pb-2 border-b border-outline-variant/10">
-              <span className="text-on-surface-variant text-sm">Produto</span>
-              <span className="text-[#191c1e] font-bold text-sm text-right">{product.name} ({product.finish})</span>
-            </div>
-            <div className="flex justify-between items-center pb-2 border-b border-outline-variant/10">
-              <span className="text-on-surface-variant text-sm">Embalagem Escolhida</span>
-              <span className="text-[#191c1e] font-bold text-sm uppercase">
-                {currentEstimate.packageSize === 'bucket' ? 'Balde 18L' : 
-                 currentEstimate.packageSize === 'can' ? 'Lata 3.6L' : 'Litro'}
-              </span>
-            </div>
-            <div className="flex justify-between items-center pb-2 border-b border-outline-variant/10">
-              <span className="text-on-surface-variant text-sm">Quantidade</span>
-              <span className="text-[#191c1e] font-bold text-sm">
-                {currentEstimate.packageCount} {
-                  currentEstimate.packageSize === 'bucket' ? 'Balde(s)' : 
-                  currentEstimate.packageSize === 'can' ? 'Lata(s)' : 'Litro(s)'
-                }
-              </span>
-            </div>
-            <div className="flex justify-between items-center pb-2 border-b border-outline-variant/10">
-              <span className="text-on-surface-variant text-sm">Rendimento</span>
-              <span className="bg-tertiary-fixed text-on-tertiary-fixed-variant px-2 py-0.5 rounded text-xs font-bold tracking-tighter">
-                1L = {product.yieldPerLiter}m² / demão
-              </span>
-            </div>
-            <div className="flex justify-between items-center pb-2">
               <span className="text-on-surface-variant text-sm">Tamanho do Imóvel</span>
               <span className="text-[#191c1e] font-bold text-sm">{currentEstimate.area} m²</span>
             </div>
             <div className="flex justify-between items-center pb-2 border-b border-outline-variant/10">
-              <span className="text-on-surface-variant text-sm">Número de Demãos</span>
-              <span className="text-[#191c1e] font-bold text-sm">{currentEstimate.coats} Demãos</span>
+              <span className="text-on-surface-variant text-sm">Forma de Cobrança</span>
+              <span className="text-[#191c1e] font-bold text-sm">
+                {currentEstimate.pricingType ? (pricingLabels[currentEstimate.pricingType] || currentEstimate.pricingType) : 'Não informado'}
+              </span>
             </div>
+            {currentEstimate.pricingType === 'm2' && (
+              <div className="flex justify-between items-center pb-2 border-b border-outline-variant/10">
+                <span className="text-on-surface-variant text-sm">Preço por m²</span>
+                <span className="text-[#191c1e] font-bold text-sm">{formatCurrency(currentEstimate.pricePerM2 || 0)}</span>
+              </div>
+            )}
             <div className="flex justify-between items-center">
               <span className="text-on-surface-variant text-sm">Tinta Inclusa</span>
               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
@@ -243,12 +343,34 @@ export default function ResultsPage() {
 
         {/* Call to Action */}
         <div className="pt-4 space-y-4">
-          <Link href="/review">
-            <button className="w-full bg-gradient-to-b from-primary to-primary-container text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg active:scale-95 duration-150 transition-transform">
+          {user && (
+            <button 
+              onClick={() => router.push('/review')}
+              className="w-full bg-primary text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg active:scale-95 duration-150 transition-transform"
+            >
               <Send size={20} />
-              Gerar Mensagem Profissional
+              Revisar e Enviar para Cliente
             </button>
-          </Link>
+          )}
+
+          {!user && (
+            <a 
+              href={getWhatsAppUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                if (!businessPhone) {
+                  e.preventDefault();
+                  alert('O consultor ainda não configurou o número de WhatsApp.');
+                }
+              }}
+              className="w-full bg-gradient-to-b from-[#25D366] to-[#128C7E] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg active:scale-95 duration-150 transition-transform"
+            >
+              <Send size={20} />
+              Enviar Orçamento para o Consultor
+            </a>
+          )}
+          
           <button 
             onClick={() => router.push('/schedule')}
             className="w-full bg-secondary text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-md active:scale-95 duration-150 transition-transform"
@@ -256,32 +378,28 @@ export default function ResultsPage() {
             <CalendarIcon size={20} />
             Agendar Consulta Online
           </button>
-          <button className="w-full bg-surface-container-high text-on-secondary-container py-4 rounded-xl font-bold flex items-center justify-center gap-3 active:scale-95 duration-150 transition-transform">
-            <FileText size={20} />
-            Exportar PDF do Orçamento
-          </button>
           <button 
-            onClick={handleSave}
+            onClick={() => alert('Funcionalidade de exportação para PDF em desenvolvimento.')}
             className="w-full bg-surface-container-high text-on-secondary-container py-4 rounded-xl font-bold flex items-center justify-center gap-3 active:scale-95 duration-150 transition-transform"
           >
-            <Bookmark size={20} />
-            Salvar Orçamento
+            <FileText size={20} />
+            Exportar PDF do Orçamento
           </button>
         </div>
 
         {/* Material Selection Insight */}
-        <div className="relative w-full aspect-square rounded-xl overflow-hidden mt-8 bg-white border border-outline-variant/10">
+        <div className="relative w-full aspect-video rounded-xl overflow-hidden mt-8 bg-primary/5 border border-outline-variant/10">
           <Image 
-            src="https://picsum.photos/seed/painter-pro-logo/800/800" 
-            alt="Pintor PRO Calc Logo"
+            src="https://images.unsplash.com/photo-1595844730298-b960ff98fee0?q=80&w=800&auto=format&fit=crop" 
+            alt="Pintura Profissional"
             fill
-            className="object-contain p-4"
+            className="object-cover"
             referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-6">
             <div>
-              <p className="text-white text-sm font-bold">Qualidade Premium</p>
-              <p className="text-white/70 text-xs">Cálculo baseado em tintas de alto rendimento.</p>
+              <p className="text-white text-sm font-bold tracking-tight">Qualidade Premium</p>
+              <p className="text-white/70 text-[10px] uppercase tracking-widest">Cálculo baseado em tintas de alto rendimento.</p>
             </div>
           </div>
         </div>

@@ -57,6 +57,14 @@ service cloud.firestore {
     //   - status: string
     //   - createdAt: timestamp
     //
+    // Collection: settings
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required) - Owner UID
+    //   - businessPhone: string (optional)
+    //   - createdAt: timestamp (optional)
+    //   - updatedAt: timestamp (optional)
+    //
     // ===============================================================
 
     // ===============================================================
@@ -88,8 +96,13 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && 
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
          (request.auth.token.email == "andreyluisluis732@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
     }
 
     // ===============================================================
@@ -103,17 +116,25 @@ service cloud.firestore {
     }
 
     match /estimates/{estimateId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow read: if true; // Allow anyone with the link to view the estimate
+      allow list: if isAuthenticated() && (resource == null || resource.data.uid == request.auth.uid);
+      allow create: if true; // Allow guests to save estimates for sharing
       allow update: if isAuthenticated() && isDocOwner() && uidNotModified();
       allow delete: if isAuthenticated() && isDocOwner();
     }
 
     match /appointments/{appointmentId} {
       allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow list: if isAuthenticated() && (resource == null || resource.data.uid == request.auth.uid);
+      allow create: if (isAuthenticated() && request.resource.data.uid == request.auth.uid && uidUnchanged()) || 
+                    (!isAuthenticated() && request.resource.data.keys().hasAll(['clientName', 'clientPhone', 'date', 'time', 'uid']));
       allow update: if isAuthenticated() && isDocOwner() && uidNotModified();
       allow delete: if isAuthenticated() && isDocOwner();
+    }
+
+    match /settings/{userId} {
+      allow read: if true; // Allow anyone to read professional settings (phone number)
+      allow write: if isOwner(userId) && uidUnchanged();
     }
   }
 }

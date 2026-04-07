@@ -11,19 +11,22 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
+  const publicPages = ['/', '/calculate', '/results', '/catalog', '/login', '/_not-found', '/schedule', '/help', '/share'];
+  const isPublicPage = pathname ? publicPages.includes(pathname) : true;
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
     if (mounted && !loading) {
-      if (!user && pathname !== '/login') {
+      if (!user && !isPublicPage) {
         router.push('/login');
       } else if (user && pathname === '/login') {
         router.push('/');
       }
     }
-  }, [user, loading, pathname, router, mounted]);
+  }, [user, loading, pathname, router, mounted, isPublicPage]);
 
   // Avoid hydration mismatch by rendering the same thing on server and client initial render
   if (!mounted || loading) {
@@ -34,8 +37,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Allow access to login page when not logged in
-  if (!user && pathname !== '/login') {
+  // Allow access to public pages when not logged in
+  if (!user && !isPublicPage) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
