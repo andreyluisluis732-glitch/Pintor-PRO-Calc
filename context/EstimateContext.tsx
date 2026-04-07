@@ -2,21 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { PRODUCT_CATALOG } from '@/constants/catalog';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  serverTimestamp,
-  getDocFromServer,
-  limit
-} from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
+import { User } from '@supabase/supabase-js';
 
 export type PropertyType = 'Casa' | 'Apartamento' | 'Prédio' | 'Galpão' | 'Condomínio' | 'Comercial';
 
@@ -65,54 +52,27 @@ export interface Estimate {
   notes?: string;
 }
 
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
-
-interface FirestoreErrorInfo {
+interface SupabaseErrorInfo {
   error: string;
-  operationType: OperationType;
+  operationType: string;
   path: string | null;
   authInfo: {
     userId: string | undefined;
     email: string | null | undefined;
-    emailVerified: boolean | undefined;
-    isAnonymous: boolean | undefined;
-    tenantId: string | null | undefined;
-    providerInfo: {
-      providerId: string;
-      displayName: string | null;
-      email: string | null;
-      photoUrl: string | null;
-    }[];
   }
 }
 
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+function handleSupabaseError(error: any, operationType: string, path: string | null) {
+  const errInfo: SupabaseErrorInfo = {
+    error: error?.message || String(error),
     authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
+      userId: undefined, // Will be filled if needed
+      email: undefined,
     },
     operationType,
     path
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  console.error('Supabase Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
 
@@ -178,90 +138,128 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   });
   const [professionalUid, setProfessionalUid] = useState<string | null>(null);
 
-  // Test connection
-  useEffect(() => {
-    async function testConnection() {
-      try {
-        await getDocFromServer(doc(db, 'test', 'connection'));
-      } catch (error) {
-        if(error instanceof Error && error.message.includes('the client is offline')) {
-          console.error("Please check your Firebase configuration. ");
-        }
-      }
-    }
-    testConnection();
-  }, []);
-
   // Auth listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Firestore sync
+  // Supabase sync
   useEffect(() => {
-    let unsubEstimates = () => {};
-    let unsubAppointments = () => {};
-    let unsubSettings = () => {};
+    let estimatesSubscription: any;
+    let appointmentsSubscription: any;
+    let settingsSubscription: any;
 
-    if (user) {
-      const estimatesQuery = query(collection(db, 'estimates'), where('uid', '==', user.uid));
-      unsubEstimates = onSnapshot(estimatesQuery, (snapshot) => {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Estimate));
-        setHistory(data.sort((a, b) => b.date.localeCompare(a.date)));
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'estimates');
-      });
+    const fetchData = async () => {
+      if (user) {
+        // Fetch Estimates
+        const { data: estimates, error: estError } = await supabase
+          .from('estimates')
+          .select('*')
+          .eq('uid', user.id)
+          .order('created_at', { ascending: false });
 
-      const appointmentsQuery = query(collection(db, 'appointments'), where('uid', '==', user.uid));
-      unsubAppointments = onSnapshot(appointmentsQuery, (snapshot) => {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment));
-        setAppointments(data);
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'appointments');
-      });
+        if (estError) handleSupabaseError(estError, 'LIST', 'estimates');
+        else setHistory(estimates.map(e => ({
+          ...e,
+          includePaint: e.include_paint,
+          productId: e.product_id,
+          pricePerM2: e.price_per_m2,
+          fixedPrice: e.fixed_price,
+          totalLiters: e.total_liters,
+          packageSize: e.package_size,
+          packageCount: e.package_count,
+          materialCost: e.material_cost,
+          laborCost: e.labor_cost,
+          totalCost: e.total_cost,
+          mediaUrls: e.media_urls
+        })));
 
-      unsubSettings = onSnapshot(doc(db, 'settings', user.uid), (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setBusinessPhoneState(data.businessPhone || '');
-          setLaborPricePerM2(data.laborPricePerM2 || 20);
-          if (data.defaultPrices) {
-            setDefaultPrices(prev => ({ ...prev, ...data.defaultPrices }));
+        // Fetch Appointments
+        const { data: appointments, error: appError } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('uid', user.id);
+
+        if (appError) handleSupabaseError(appError, 'LIST', 'appointments');
+        else setAppointments(appointments.map(a => ({
+          ...a,
+          clientName: a.client_name,
+          clientPhone: a.client_phone,
+          clientEmail: a.client_email,
+          clientAddress: a.client_address
+        })));
+
+        // Fetch Settings
+        const { data: settings, error: setError } = await supabase
+          .from('settings')
+          .select('*')
+          .eq('uid', user.id)
+          .single();
+
+        if (setError && setError.code !== 'PGRST116') {
+          handleSupabaseError(setError, 'GET', 'settings');
+        } else if (settings) {
+          setBusinessPhoneState(settings.business_phone || '');
+          setLaborPricePerM2(Number(settings.labor_price_per_m2) || 20);
+          if (settings.default_prices) {
+            setDefaultPrices(prev => ({ ...prev, ...settings.default_prices }));
           }
-          setProfessionalUid(user.uid);
+          setProfessionalUid(user.id);
         }
-      }, (error) => {
-        handleFirestoreError(error, OperationType.GET, `settings/${user.uid}`);
-      });
-    } else {
-      setHistory([]);
-      setAppointments([]);
-      
-      // For guest users, try to find the first settings document (the professional's)
-      const settingsQuery = query(collection(db, 'settings'), limit(1));
-      unsubSettings = onSnapshot(settingsQuery, (snapshot) => {
-        if (!snapshot.empty) {
-          const data = snapshot.docs[0].data();
-          setBusinessPhoneState(data.businessPhone || '');
-          setLaborPricePerM2(data.laborPricePerM2 || 20);
-          if (data.defaultPrices) {
-            setDefaultPrices(prev => ({ ...prev, ...data.defaultPrices }));
+
+        // Real-time subscriptions
+        estimatesSubscription = supabase
+          .channel('estimates_changes')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'estimates', filter: `uid=eq.${user.id}` }, () => fetchData())
+          .subscribe();
+
+        appointmentsSubscription = supabase
+          .channel('appointments_changes')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `uid=eq.${user.id}` }, () => fetchData())
+          .subscribe();
+
+        settingsSubscription = supabase
+          .channel('settings_changes')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: `uid=eq.${user.id}` }, () => fetchData())
+          .subscribe();
+      } else {
+        setHistory([]);
+        setAppointments([]);
+        
+        // For guest users, try to find the first settings document
+        const { data: settings } = await supabase
+          .from('settings')
+          .select('*')
+          .limit(1)
+          .single();
+
+        if (settings) {
+          setBusinessPhoneState(settings.business_phone || '');
+          setLaborPricePerM2(Number(settings.labor_price_per_m2) || 20);
+          if (settings.default_prices) {
+            setDefaultPrices(prev => ({ ...prev, ...settings.default_prices }));
           }
-          setProfessionalUid(snapshot.docs[0].id);
+          setProfessionalUid(settings.uid);
         }
-      }, (error) => {
-        console.warn("Could not fetch professional settings for guest:", error);
-      });
-    }
+      }
+    };
+
+    fetchData();
 
     return () => {
-      unsubEstimates();
-      unsubAppointments();
-      unsubSettings();
+      if (estimatesSubscription) supabase.removeChannel(estimatesSubscription);
+      if (appointmentsSubscription) supabase.removeChannel(appointmentsSubscription);
+      if (settingsSubscription) supabase.removeChannel(settingsSubscription);
     };
   }, [user]);
 
@@ -272,14 +270,21 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   }) => {
     if (!user) return;
     try {
-      const { setDoc } = await import('firebase/firestore');
-      await setDoc(doc(db, 'settings', user.uid), {
-        ...settings,
-        uid: user.uid,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      const updateData: any = {
+        uid: user.id,
+        updated_at: new Date().toISOString()
+      };
+      if (settings.businessPhone !== undefined) updateData.business_phone = settings.businessPhone;
+      if (settings.laborPricePerM2 !== undefined) updateData.labor_price_per_m2 = settings.laborPricePerM2;
+      if (settings.defaultPrices !== undefined) updateData.default_prices = settings.defaultPrices;
+
+      const { error } = await supabase
+        .from('settings')
+        .upsert(updateData);
+
+      if (error) throw error;
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `settings/${user.uid}`);
+      handleSupabaseError(error, 'UPDATE', `settings/${user.id}`);
     }
   };
 
@@ -289,22 +294,75 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
 
   const saveEstimate = async (estimateData: Omit<Estimate, 'id' | 'uid'>) => {
     try {
-      const docRef = await addDoc(collection(db, 'estimates'), {
-        ...estimateData,
-        uid: user?.uid || 'guest',
-        createdAt: serverTimestamp()
-      });
-      return docRef.id;
+      const insertData = {
+        uid: user?.id || professionalUid || '00000000-0000-0000-0000-000000000000',
+        title: estimateData.title,
+        client_name: estimateData.clientName,
+        client_phone: estimateData.clientPhone,
+        property_type: estimateData.propertyType,
+        city: estimateData.city,
+        neighborhood: estimateData.neighborhood,
+        location: estimateData.location,
+        include_paint: estimateData.includePaint,
+        area: estimateData.area,
+        product_id: estimateData.productId,
+        color: estimateData.color,
+        coats: estimateData.coats,
+        pricing_type: estimateData.pricingType,
+        price_per_m2: estimateData.pricePerM2,
+        fixed_price: estimateData.fixedPrice,
+        total_liters: estimateData.totalLiters,
+        package_size: estimateData.packageSize,
+        package_count: estimateData.packageCount,
+        material_cost: estimateData.materialCost,
+        labor_cost: estimateData.laborCost,
+        total_cost: estimateData.totalCost,
+        date: estimateData.date,
+        status: estimateData.status,
+        media_urls: estimateData.mediaUrls,
+        notes: estimateData.notes
+      };
+
+      const { data, error } = await supabase
+        .from('estimates')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data.id;
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'estimates');
+      handleSupabaseError(error, 'CREATE', 'estimates');
     }
   };
 
   const getEstimateById = async (id: string): Promise<Estimate | null> => {
     try {
-      const docSnap = await getDocFromServer(doc(db, 'estimates', id));
-      if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as Estimate;
+      const { data, error } = await supabase
+        .from('estimates')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        return {
+          ...data,
+          includePaint: data.include_paint,
+          productId: data.product_id,
+          pricePerM2: data.price_per_m2,
+          fixedPrice: data.fixed_price,
+          totalLiters: data.total_liters,
+          packageSize: data.package_size,
+          packageCount: data.package_count,
+          materialCost: data.material_cost,
+          laborCost: data.labor_cost,
+          totalCost: data.total_cost,
+          mediaUrls: data.media_urls,
+          clientName: data.client_name,
+          clientPhone: data.client_phone,
+          propertyType: data.property_type
+        } as Estimate;
       }
       return null;
     } catch (error) {
@@ -314,41 +372,66 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const saveAppointment = async (appointmentData: Omit<Appointment, 'id' | 'uid'>) => {
-    const targetUid = user?.uid || professionalUid;
+    const targetUid = user?.id || professionalUid;
     if (!targetUid) {
       console.error("No target UID for appointment");
       return;
     }
     try {
-      await addDoc(collection(db, 'appointments'), {
-        ...appointmentData,
-        uid: targetUid,
-        createdAt: serverTimestamp()
-      });
+      const { error } = await supabase
+        .from('appointments')
+        .insert({
+          uid: targetUid,
+          client_name: appointmentData.clientName,
+          client_phone: appointmentData.clientPhone,
+          client_email: appointmentData.clientEmail,
+          client_address: appointmentData.clientAddress,
+          notes: appointmentData.notes,
+          date: appointmentData.date,
+          time: appointmentData.time,
+          status: appointmentData.status
+        });
+
+      if (error) throw error;
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'appointments');
+      handleSupabaseError(error, 'CREATE', 'appointments');
     }
   };
 
   const updateAppointment = async (updatedApp: Appointment) => {
     if (!user) return;
     try {
-      const { id, ...data } = updatedApp;
-      await updateDoc(doc(db, 'appointments', id), {
-        ...data,
-        updatedAt: serverTimestamp()
-      });
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          client_name: updatedApp.clientName,
+          client_phone: updatedApp.clientPhone,
+          client_email: updatedApp.clientEmail,
+          client_address: updatedApp.clientAddress,
+          notes: updatedApp.notes,
+          date: updatedApp.date,
+          time: updatedApp.time,
+          status: updatedApp.status
+        })
+        .eq('id', updatedApp.id);
+
+      if (error) throw error;
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `appointments/${updatedApp.id}`);
+      handleSupabaseError(error, 'UPDATE', `appointments/${updatedApp.id}`);
     }
   };
 
   const deleteAppointment = async (id: string) => {
     if (!user) return;
     try {
-      await deleteDoc(doc(db, 'appointments', id));
+      const { error } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `appointments/${id}`);
+      handleSupabaseError(error, 'DELETE', `appointments/${id}`);
     }
   };
 

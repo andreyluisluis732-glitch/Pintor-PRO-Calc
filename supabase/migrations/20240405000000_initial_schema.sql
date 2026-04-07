@@ -7,6 +7,16 @@ create table public.profiles (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- Create settings table
+create table public.settings (
+  uid uuid references auth.users on delete cascade not null primary key,
+  business_phone text,
+  labor_price_per_m2 numeric default 20,
+  default_prices jsonb default '{"m2": 20, "empreitada": 0, "diaria": 150, "ambiente": 300, "especifico": 0, "completo": 0}'::jsonb,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- Create estimates table
 create table public.estimates (
   id uuid default gen_random_uuid() primary key,
@@ -23,7 +33,9 @@ create table public.estimates (
   product_id text,
   color text,
   coats integer default 2,
+  pricing_type text default 'm2',
   price_per_m2 numeric,
+  fixed_price numeric,
   total_liters numeric,
   package_size text,
   package_count integer,
@@ -32,6 +44,8 @@ create table public.estimates (
   total_cost numeric not null,
   date text,
   status text default 'Aguardando',
+  media_urls text[],
+  notes text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -52,6 +66,7 @@ create table public.appointments (
 
 -- Set up Row Level Security (RLS)
 alter table public.profiles enable row level security;
+alter table public.settings enable row level security;
 alter table public.estimates enable row level security;
 alter table public.appointments enable row level security;
 
@@ -64,6 +79,16 @@ create policy "Users can insert their own profile." on public.profiles
 
 create policy "Users can update own profile." on public.profiles
   for update using (auth.uid() = id);
+
+-- Settings policies
+create policy "Users can view their own settings." on public.settings
+  for select using (auth.uid() = uid);
+
+create policy "Users can insert their own settings." on public.settings
+  for insert with check (auth.uid() = uid);
+
+create policy "Users can update their own settings." on public.settings
+  for update using (auth.uid() = uid);
 
 -- Estimates policies
 create policy "Users can view their own estimates." on public.estimates
@@ -97,6 +122,10 @@ returns trigger as $$
 begin
   insert into public.profiles (id, email, display_name)
   values (new.id, new.email, new.raw_user_meta_data->>'display_name');
+  
+  insert into public.settings (uid)
+  values (new.id);
+  
   return new;
 end;
 $$ language plpgsql security definer;

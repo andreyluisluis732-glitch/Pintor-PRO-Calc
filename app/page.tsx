@@ -8,7 +8,7 @@ import BottomNav from '@/components/BottomNav';
 import Image from 'next/image';
 
 import { useEstimate } from '@/context/EstimateContext';
-import { auth } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 
 export default function Home() {
   const { history, user } = useEstimate();
@@ -17,6 +17,12 @@ export default function Home() {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Profissional';
 
   return (
     <div className="min-h-screen flex flex-col pb-24 bg-[#f0f2f5]">
@@ -29,18 +35,18 @@ export default function Home() {
             </div>
             {user && (
               <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-                Olá, {user.displayName?.split(' ')[0] || 'Profissional'}
+                Olá, {displayName.split(' ')[0]}
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
             <button 
-              onClick={() => auth.signOut()}
+              onClick={handleSignOut}
               className="text-[#43474f] hover:bg-[#e7e8eb] transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center gap-2"
               title="Sair"
             >
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                {user?.displayName?.[0] || user?.email?.[0] || 'P'}
+                {displayName[0].toUpperCase()}
               </div>
             </button>
           </div>

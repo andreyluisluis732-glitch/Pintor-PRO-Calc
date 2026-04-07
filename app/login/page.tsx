@@ -2,9 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth, db, firebaseConfig } from '@/lib/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { motion } from 'motion/react';
 import { Mail, Lock, User, ArrowRight, Loader2, Paintbrush, Chrome } from 'lucide-react';
 
@@ -21,29 +19,16 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      // Check if user doc exists, if not create it
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (!userDoc.exists()) {
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          role: 'user',
-          createdAt: serverTimestamp()
-        });
-      }
-      router.push('/');
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/operation-not-allowed') {
-        setError('O login com Google não está ativado no Firebase Console. Acesse o console do Firebase e ative o provedor Google em Authentication > Sign-in method.');
-      } else {
-        setError('Falha ao entrar com Google. Tente novamente.');
-      }
+      setError('Falha ao entrar com Google. Verifique se o provedor está configurado no Supabase.');
     } finally {
       setLoading(false);
     }
@@ -56,35 +41,34 @@ export default function LoginPage() {
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        await updateProfile(user, { displayName: name });
-        
-        // Create user doc in Firestore
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: user.email,
-          displayName: name,
-          role: 'user',
-          createdAt: serverTimestamp()
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
         });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              display_name: name,
+            },
+          },
+        });
+        if (error) throw error;
+        setError('Verifique seu e-mail para confirmar o cadastro!');
+        return;
       }
       router.push('/');
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/operation-not-allowed') {
-        setError('O login por E-mail/Senha não está ativado no Firebase Console. Por favor, use o Google Login ou ative o provedor de E-mail no console do Firebase.');
-      } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      if (err.message === 'Invalid login credentials') {
         setError('E-mail ou senha incorretos.');
-      } else if (err.code === 'auth/email-already-in-use') {
+      } else if (err.message === 'User already registered') {
         setError('Este e-mail já está em uso.');
-      } else if (err.code === 'auth/weak-password') {
-        setError('A senha deve ter pelo menos 6 caracteres.');
       } else {
-        setError('Ocorreu um erro. Tente novamente.');
+        setError(err.message || 'Ocorreu um erro. Tente novamente.');
       }
     } finally {
       setLoading(false);
@@ -117,16 +101,6 @@ export default function LoginPage() {
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl">
               <p>{error}</p>
-              {error.includes('Firebase Console') && (
-                <a 
-                  href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/providers`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-block font-bold underline text-red-700"
-                >
-                  Ir para o Console do Firebase →
-                </a>
-              )}
             </div>
           )}
 

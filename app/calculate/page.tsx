@@ -70,36 +70,30 @@ function CalculateContent() {
     setError(null);
     
     try {
-      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-      const { storage } = await import('@/lib/firebase');
+      const { supabase } = await import('@/lib/supabase');
       
       const urls: string[] = [];
       
-      // Timeout helper
-      const timeout = (ms: number) => new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Tempo limite excedido")), ms)
-      );
-
       for (const file of mediaFiles) {
         try {
-          const storageRef = ref(storage, `estimates/${Date.now()}_${file.name}`);
-          
-          // Race the upload against a 30s timeout per file
-          const snapshot = await Promise.race([
-            uploadBytes(storageRef, file),
-            timeout(30000)
-          ]) as any;
-          
-          const url = await getDownloadURL(snapshot.ref);
-          urls.push(url);
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+          const filePath = `estimates/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('estimates')
+            .upload(filePath, file);
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('estimates')
+            .getPublicUrl(filePath);
+
+          urls.push(publicUrl);
         } catch (fileErr) {
           console.warn(`Falha ao enviar arquivo ${file.name}:`, fileErr);
-          // Continue with other files
         }
-      }
-      
-      if (urls.length === 0 && mediaFiles.length > 0) {
-        throw new Error("Nenhum arquivo pôde ser enviado.");
       }
       
       return urls;
