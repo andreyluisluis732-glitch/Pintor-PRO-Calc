@@ -2,8 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { PRODUCT_CATALOG } from '@/constants/catalog';
-import { supabase } from '@/lib/supabase';
-import { User } from '@supabase/supabase-js';
 
 export type PropertyType = 'Casa' | 'Apartamento' | 'Prédio' | 'Galpão' | 'Condomínio' | 'Comercial';
 
@@ -52,28 +50,10 @@ export interface Estimate {
   notes?: string;
 }
 
-interface SupabaseErrorInfo {
-  error: string;
-  operationType: string;
-  path: string | null;
-  authInfo: {
-    userId: string | undefined;
-    email: string | null | undefined;
-  }
-}
-
-function handleSupabaseError(error: any, operationType: string, path: string | null) {
-  const errInfo: SupabaseErrorInfo = {
-    error: error?.message || String(error),
-    authInfo: {
-      userId: undefined, // Will be filled if needed
-      email: undefined,
-    },
-    operationType,
-    path
-  };
-  console.error('Supabase Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+// Mock User type to maintain compatibility
+export interface User {
+  id: string;
+  email?: string;
 }
 
 interface EstimateContextType {
@@ -116,9 +96,18 @@ interface EstimateContextType {
     mediaUrls?: string[];
     notes?: string;
   }) => void;
+  login: (email: string) => void;
+  logout: () => void;
 }
 
 const EstimateContext = createContext<EstimateContextType | undefined>(undefined);
+
+const STORAGE_KEYS = {
+  ESTIMATES: 'pintor_pro_estimates',
+  APPOINTMENTS: 'pintor_pro_appointments',
+  SETTINGS: 'pintor_pro_settings',
+  USER: 'pintor_pro_user'
+};
 
 export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -136,156 +125,64 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     especifico: 0,
     completo: 0
   });
-  const [professionalUid, setProfessionalUid] = useState<string | null>(null);
 
-  // Auth listener
+  // Load initial data from localStorage
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const storedEstimates = localStorage.getItem(STORAGE_KEYS.ESTIMATES);
+    if (storedEstimates) {
+      setHistory(JSON.parse(storedEstimates));
+    }
 
-    return () => subscription.unsubscribe();
+    const storedAppointments = localStorage.getItem(STORAGE_KEYS.APPOINTMENTS);
+    if (storedAppointments) {
+      setAppointments(JSON.parse(storedAppointments));
+    }
+
+    const storedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    if (storedSettings) {
+      const settings = JSON.parse(storedSettings);
+      setBusinessPhoneState(settings.businessPhone || '');
+      setLaborPricePerM2(settings.laborPricePerM2 || 20);
+      if (settings.defaultPrices) {
+        setDefaultPrices(prev => ({ ...prev, ...settings.defaultPrices }));
+      }
+    }
+
+    setLoading(false);
   }, []);
 
-  // Supabase sync
-  useEffect(() => {
-    let estimatesSubscription: any;
-    let appointmentsSubscription: any;
-    let settingsSubscription: any;
+  const login = (email: string) => {
+    const newUser = { id: 'local-user', email };
+    setUser(newUser);
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
+  };
 
-    const fetchData = async () => {
-      if (user) {
-        // Fetch Estimates
-        const { data: estimates, error: estError } = await supabase
-          .from('estimates')
-          .select('*')
-          .eq('uid', user.id)
-          .order('created_at', { ascending: false });
-
-        if (estError) handleSupabaseError(estError, 'LIST', 'estimates');
-        else setHistory(estimates.map(e => ({
-          ...e,
-          includePaint: e.include_paint,
-          productId: e.product_id,
-          pricePerM2: e.price_per_m2,
-          fixedPrice: e.fixed_price,
-          totalLiters: e.total_liters,
-          packageSize: e.package_size,
-          packageCount: e.package_count,
-          materialCost: e.material_cost,
-          laborCost: e.labor_cost,
-          totalCost: e.total_cost,
-          mediaUrls: e.media_urls
-        })));
-
-        // Fetch Appointments
-        const { data: appointments, error: appError } = await supabase
-          .from('appointments')
-          .select('*')
-          .eq('uid', user.id);
-
-        if (appError) handleSupabaseError(appError, 'LIST', 'appointments');
-        else setAppointments(appointments.map(a => ({
-          ...a,
-          clientName: a.client_name,
-          clientPhone: a.client_phone,
-          clientEmail: a.client_email,
-          clientAddress: a.client_address
-        })));
-
-        // Fetch Settings
-        const { data: settings, error: setError } = await supabase
-          .from('settings')
-          .select('*')
-          .eq('uid', user.id)
-          .single();
-
-        if (setError && setError.code !== 'PGRST116') {
-          handleSupabaseError(setError, 'GET', 'settings');
-        } else if (settings) {
-          setBusinessPhoneState(settings.business_phone || '');
-          setLaborPricePerM2(Number(settings.labor_price_per_m2) || 20);
-          if (settings.default_prices) {
-            setDefaultPrices(prev => ({ ...prev, ...settings.default_prices }));
-          }
-          setProfessionalUid(user.id);
-        }
-
-        // Real-time subscriptions
-        estimatesSubscription = supabase
-          .channel('estimates_changes')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'estimates', filter: `uid=eq.${user.id}` }, () => fetchData())
-          .subscribe();
-
-        appointmentsSubscription = supabase
-          .channel('appointments_changes')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `uid=eq.${user.id}` }, () => fetchData())
-          .subscribe();
-
-        settingsSubscription = supabase
-          .channel('settings_changes')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'settings', filter: `uid=eq.${user.id}` }, () => fetchData())
-          .subscribe();
-      } else {
-        setHistory([]);
-        setAppointments([]);
-        
-        // For guest users, try to find the first settings document
-        const { data: settings } = await supabase
-          .from('settings')
-          .select('*')
-          .limit(1)
-          .single();
-
-        if (settings) {
-          setBusinessPhoneState(settings.business_phone || '');
-          setLaborPricePerM2(Number(settings.labor_price_per_m2) || 20);
-          if (settings.default_prices) {
-            setDefaultPrices(prev => ({ ...prev, ...settings.default_prices }));
-          }
-          setProfessionalUid(settings.uid);
-        }
-      }
-    };
-
-    fetchData();
-
-    return () => {
-      if (estimatesSubscription) supabase.removeChannel(estimatesSubscription);
-      if (appointmentsSubscription) supabase.removeChannel(appointmentsSubscription);
-      if (settingsSubscription) supabase.removeChannel(settingsSubscription);
-    };
-  }, [user]);
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem(STORAGE_KEYS.USER);
+  };
 
   const updateSettings = async (settings: { 
     businessPhone?: string; 
     laborPricePerM2?: number;
     defaultPrices?: Record<PricingType, number>;
   }) => {
-    if (!user) return;
-    try {
-      const updateData: any = {
-        uid: user.id,
-        updated_at: new Date().toISOString()
-      };
-      if (settings.businessPhone !== undefined) updateData.business_phone = settings.businessPhone;
-      if (settings.laborPricePerM2 !== undefined) updateData.labor_price_per_m2 = settings.laborPricePerM2;
-      if (settings.defaultPrices !== undefined) updateData.default_prices = settings.defaultPrices;
+    const newSettings = {
+      businessPhone: settings.businessPhone !== undefined ? settings.businessPhone : businessPhone,
+      laborPricePerM2: settings.laborPricePerM2 !== undefined ? settings.laborPricePerM2 : laborPricePerM2,
+      defaultPrices: settings.defaultPrices !== undefined ? { ...defaultPrices, ...settings.defaultPrices } : defaultPrices
+    };
 
-      const { error } = await supabase
-        .from('settings')
-        .upsert(updateData);
+    if (settings.businessPhone !== undefined) setBusinessPhoneState(settings.businessPhone);
+    if (settings.laborPricePerM2 !== undefined) setLaborPricePerM2(settings.laborPricePerM2);
+    if (settings.defaultPrices !== undefined) setDefaultPrices(prev => ({ ...prev, ...settings.defaultPrices }));
 
-      if (error) throw error;
-    } catch (error) {
-      handleSupabaseError(error, 'UPDATE', `settings/${user.id}`);
-    }
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(newSettings));
   };
 
   const setBusinessPhone = async (phone: string) => {
@@ -293,146 +190,45 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const saveEstimate = async (estimateData: Omit<Estimate, 'id' | 'uid'>) => {
-    try {
-      const insertData = {
-        uid: user?.id || professionalUid || '00000000-0000-0000-0000-000000000000',
-        title: estimateData.title,
-        client_name: estimateData.clientName,
-        client_phone: estimateData.clientPhone,
-        property_type: estimateData.propertyType,
-        city: estimateData.city,
-        neighborhood: estimateData.neighborhood,
-        location: estimateData.location,
-        include_paint: estimateData.includePaint,
-        area: estimateData.area,
-        product_id: estimateData.productId,
-        color: estimateData.color,
-        coats: estimateData.coats,
-        pricing_type: estimateData.pricingType,
-        price_per_m2: estimateData.pricePerM2,
-        fixed_price: estimateData.fixedPrice,
-        total_liters: estimateData.totalLiters,
-        package_size: estimateData.packageSize,
-        package_count: estimateData.packageCount,
-        material_cost: estimateData.materialCost,
-        labor_cost: estimateData.laborCost,
-        total_cost: estimateData.totalCost,
-        date: estimateData.date,
-        status: estimateData.status,
-        media_urls: estimateData.mediaUrls,
-        notes: estimateData.notes
-      };
+    const newEstimate: Estimate = {
+      ...estimateData,
+      id: Math.random().toString(36).substr(2, 9),
+      uid: user?.id || 'local-user'
+    };
 
-      const { data, error } = await supabase
-        .from('estimates')
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data.id;
-    } catch (error) {
-      handleSupabaseError(error, 'CREATE', 'estimates');
-    }
+    const newHistory = [newEstimate, ...history];
+    setHistory(newHistory);
+    localStorage.setItem(STORAGE_KEYS.ESTIMATES, JSON.stringify(newHistory));
+    return newEstimate.id;
   };
 
   const getEstimateById = async (id: string): Promise<Estimate | null> => {
-    try {
-      const { data, error } = await supabase
-        .from('estimates')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      if (data) {
-        return {
-          ...data,
-          includePaint: data.include_paint,
-          productId: data.product_id,
-          pricePerM2: data.price_per_m2,
-          fixedPrice: data.fixed_price,
-          totalLiters: data.total_liters,
-          packageSize: data.package_size,
-          packageCount: data.package_count,
-          materialCost: data.material_cost,
-          laborCost: data.labor_cost,
-          totalCost: data.total_cost,
-          mediaUrls: data.media_urls,
-          clientName: data.client_name,
-          clientPhone: data.client_phone,
-          propertyType: data.property_type
-        } as Estimate;
-      }
-      return null;
-    } catch (error) {
-      console.error("Error fetching estimate by ID:", error);
-      return null;
-    }
+    const estimate = history.find(e => e.id === id);
+    return estimate || null;
   };
 
   const saveAppointment = async (appointmentData: Omit<Appointment, 'id' | 'uid'>) => {
-    const targetUid = user?.id || professionalUid;
-    if (!targetUid) {
-      console.error("No target UID for appointment");
-      return;
-    }
-    try {
-      const { error } = await supabase
-        .from('appointments')
-        .insert({
-          uid: targetUid,
-          client_name: appointmentData.clientName,
-          client_phone: appointmentData.clientPhone,
-          client_email: appointmentData.clientEmail,
-          client_address: appointmentData.clientAddress,
-          notes: appointmentData.notes,
-          date: appointmentData.date,
-          time: appointmentData.time,
-          status: appointmentData.status
-        });
+    const newAppointment: Appointment = {
+      ...appointmentData,
+      id: Math.random().toString(36).substr(2, 9),
+      uid: user?.id || 'local-user'
+    };
 
-      if (error) throw error;
-    } catch (error) {
-      handleSupabaseError(error, 'CREATE', 'appointments');
-    }
+    const newAppointments = [newAppointment, ...appointments];
+    setAppointments(newAppointments);
+    localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(newAppointments));
   };
 
   const updateAppointment = async (updatedApp: Appointment) => {
-    if (!user) return;
-    try {
-      const { error } = await supabase
-        .from('appointments')
-        .update({
-          client_name: updatedApp.clientName,
-          client_phone: updatedApp.clientPhone,
-          client_email: updatedApp.clientEmail,
-          client_address: updatedApp.clientAddress,
-          notes: updatedApp.notes,
-          date: updatedApp.date,
-          time: updatedApp.time,
-          status: updatedApp.status
-        })
-        .eq('id', updatedApp.id);
-
-      if (error) throw error;
-    } catch (error) {
-      handleSupabaseError(error, 'UPDATE', `appointments/${updatedApp.id}`);
-    }
+    const newAppointments = appointments.map(a => a.id === updatedApp.id ? updatedApp : a);
+    setAppointments(newAppointments);
+    localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(newAppointments));
   };
 
   const deleteAppointment = async (id: string) => {
-    if (!user) return;
-    try {
-      const { error } = await supabase
-        .from('appointments')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (error) {
-      handleSupabaseError(error, 'DELETE', `appointments/${id}`);
-    }
+    const newAppointments = appointments.filter(a => a.id !== id);
+    setAppointments(newAppointments);
+    localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(newAppointments));
   };
 
   const calculateEstimate = (data: { 
@@ -482,7 +278,6 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     if (pricingType === 'm2') {
       laborCost = area * finalPricePerM2;
     } else if (pricingType === 'completo') {
-      // Mão de obra + material: fixedPrice is the TOTAL cost
       const total = fixedPrice || defaultPrices.completo || 0;
       laborCost = Math.max(0, total - (includePaint ? materialCost : 0));
     } else {
@@ -523,7 +318,9 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       saveAppointment,
       updateAppointment,
       deleteAppointment,
-      calculateEstimate 
+      calculateEstimate,
+      login,
+      logout
     }}>
       {children}
     </EstimateContext.Provider>

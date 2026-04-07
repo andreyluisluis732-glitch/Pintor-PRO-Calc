@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { useEstimate } from '@/context/EstimateContext';
 import { motion } from 'motion/react';
-import { Mail, Lock, User, ArrowRight, Loader2, Paintbrush, Chrome } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Paintbrush } from 'lucide-react';
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,25 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
-  const handleGoogleLogin = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      console.error(err);
-      setError('Falha ao entrar com Google. Verifique se o provedor está configurado no Supabase.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { login } = useEstimate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,36 +22,16 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              display_name: name,
-            },
-          },
-        });
-        if (error) throw error;
-        setError('Verifique seu e-mail para confirmar o cadastro!');
-        return;
+      // Simple local login simulation
+      if (password.length < 6) {
+        throw new Error('A senha deve ter pelo menos 6 caracteres.');
       }
+      
+      login(email);
       router.push('/');
     } catch (err: any) {
       console.error(err);
-      if (err.message === 'Invalid login credentials') {
-        setError('E-mail ou senha incorretos.');
-      } else if (err.message === 'User already registered') {
-        setError('Este e-mail já está em uso.');
-      } else {
-        setError(err.message || 'Ocorreu um erro. Tente novamente.');
-      }
+      setError(err.message || 'Ocorreu um erro. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -105,22 +67,6 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="w-full bg-white border border-slate-200 text-slate-700 font-semibold py-3 rounded-xl shadow-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-3 disabled:opacity-70"
-            >
-              <Chrome className="w-5 h-5 text-blue-500" />
-              Entrar com Google
-            </button>
-
-            <div className="relative flex items-center gap-4 my-6">
-              <div className="flex-1 h-px bg-slate-100"></div>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">ou</span>
-              <div className="flex-1 h-px bg-slate-100"></div>
-            </div>
-
             {!isLogin && (
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />

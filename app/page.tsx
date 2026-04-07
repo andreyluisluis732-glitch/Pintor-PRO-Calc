@@ -8,10 +8,9 @@ import BottomNav from '@/components/BottomNav';
 import Image from 'next/image';
 
 import { useEstimate } from '@/context/EstimateContext';
-import { supabase } from '@/lib/supabase';
 
 export default function Home() {
-  const { history, user } = useEstimate();
+  const { history, user, logout } = useEstimate();
   const lastEstimate = history[0];
 
   const formatCurrency = (value: number) => {
@@ -19,10 +18,10 @@ export default function Home() {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    logout();
   };
 
-  const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Profissional';
+  const displayName = user?.email?.split('@')[0] || 'Profissional';
 
   return (
     <div className="min-h-screen flex flex-col pb-24 bg-[#f0f2f5]">

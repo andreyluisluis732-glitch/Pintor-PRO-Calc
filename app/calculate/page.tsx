@@ -70,31 +70,11 @@ function CalculateContent() {
     setError(null);
     
     try {
-      const { supabase } = await import('@/lib/supabase');
+      // Mock upload for local storage version
+      const urls: string[] = mediaFiles.map(file => URL.createObjectURL(file));
       
-      const urls: string[] = [];
-      
-      for (const file of mediaFiles) {
-        try {
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-          const filePath = `estimates/${fileName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from('estimates')
-            .upload(filePath, file);
-
-          if (uploadError) throw uploadError;
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('estimates')
-            .getPublicUrl(filePath);
-
-          urls.push(publicUrl);
-        } catch (fileErr) {
-          console.warn(`Falha ao enviar arquivo ${file.name}:`, fileErr);
-        }
-      }
+      // Simulate a small delay
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       return urls;
     } catch (err) {
