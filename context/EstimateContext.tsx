@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { PRODUCT_CATALOG } from '@/constants/catalog';
+import { supabase } from '@/lib/supabase';
+import { User } from '@supabase/supabase-js';
 
 export type PropertyType = 'Casa' | 'Apartamento' | 'Prédio' | 'Galpão' | 'Condomínio' | 'Comercial';
 
@@ -50,12 +52,6 @@ export interface Estimate {
   notes?: string;
 }
 
-// Mock User type to maintain compatibility
-export interface User {
-  id: string;
-  email?: string;
-}
-
 interface EstimateContextType {
   user: User | null;
   loading: boolean;
@@ -96,17 +92,96 @@ interface EstimateContextType {
     mediaUrls?: string[];
     notes?: string;
   }) => void;
-  login: (email: string) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const EstimateContext = createContext<EstimateContextType | undefined>(undefined);
 
-const STORAGE_KEYS = {
-  ESTIMATES: 'pintor_pro_estimates',
-  APPOINTMENTS: 'pintor_pro_appointments',
-  SETTINGS: 'pintor_pro_settings',
-  USER: 'pintor_pro_user'
+// Helper to map DB snake_case to CamelCase
+const mapDBToEstimate = (db: any): Estimate => ({
+  id: db.id,
+  uid: db.uid,
+  title: db.title,
+  clientName: db.client_name,
+  clientPhone: db.client_phone,
+  propertyType: db.property_type,
+  city: db.city,
+  neighborhood: db.neighborhood,
+  location: db.location,
+  includePaint: db.include_paint,
+  area: db.area,
+  productId: db.product_id,
+  color: db.color,
+  coats: db.coats,
+  pricingType: db.pricing_type,
+  pricePerM2: db.price_per_m2,
+  fixedPrice: db.fixed_price,
+  totalLiters: db.total_liters,
+  packageSize: db.package_size,
+  packageCount: db.package_count,
+  materialCost: db.material_cost,
+  laborCost: db.labor_cost,
+  totalCost: db.total_cost,
+  date: db.date,
+  status: db.status,
+  mediaUrls: db.media_urls,
+  notes: db.notes,
+});
+
+const mapEstimateToDB = (est: Partial<Estimate>) => {
+  const db: any = {};
+  if (est.title !== undefined) db.title = est.title;
+  if (est.clientName !== undefined) db.client_name = est.clientName;
+  if (est.clientPhone !== undefined) db.client_phone = est.clientPhone;
+  if (est.propertyType !== undefined) db.property_type = est.propertyType;
+  if (est.city !== undefined) db.city = est.city;
+  if (est.neighborhood !== undefined) db.neighborhood = est.neighborhood;
+  if (est.location !== undefined) db.location = est.location;
+  if (est.includePaint !== undefined) db.include_paint = est.includePaint;
+  if (est.area !== undefined) db.area = est.area;
+  if (est.productId !== undefined) db.product_id = est.productId;
+  if (est.color !== undefined) db.color = est.color;
+  if (est.coats !== undefined) db.coats = est.coats;
+  if (est.pricingType !== undefined) db.pricing_type = est.pricingType;
+  if (est.pricePerM2 !== undefined) db.price_per_m2 = est.pricePerM2;
+  if (est.fixedPrice !== undefined) db.fixed_price = est.fixedPrice;
+  if (est.totalLiters !== undefined) db.total_liters = est.totalLiters;
+  if (est.packageSize !== undefined) db.package_size = est.packageSize;
+  if (est.packageCount !== undefined) db.package_count = est.packageCount;
+  if (est.materialCost !== undefined) db.material_cost = est.materialCost;
+  if (est.laborCost !== undefined) db.labor_cost = est.laborCost;
+  if (est.totalCost !== undefined) db.total_cost = est.totalCost;
+  if (est.date !== undefined) db.date = est.date;
+  if (est.status !== undefined) db.status = est.status;
+  if (est.mediaUrls !== undefined) db.media_urls = est.mediaUrls;
+  if (est.notes !== undefined) db.notes = est.notes;
+  return db;
+};
+
+const mapDBToAppointment = (db: any): Appointment => ({
+  id: db.id,
+  uid: db.uid,
+  clientName: db.client_name,
+  clientPhone: db.client_phone,
+  clientEmail: db.client_email,
+  clientAddress: db.client_address,
+  notes: db.notes,
+  date: db.date,
+  time: db.time,
+  status: db.status,
+});
+
+const mapAppointmentToDB = (app: Partial<Appointment>) => {
+  const db: any = {};
+  if (app.clientName !== undefined) db.client_name = app.clientName;
+  if (app.clientPhone !== undefined) db.client_phone = app.clientPhone;
+  if (app.clientEmail !== undefined) db.client_email = app.clientEmail;
+  if (app.clientAddress !== undefined) db.client_address = app.clientAddress;
+  if (app.notes !== undefined) db.notes = app.notes;
+  if (app.date !== undefined) db.date = app.date;
+  if (app.time !== undefined) db.time = app.time;
+  if (app.status !== undefined) db.status = app.status;
+  return db;
 };
 
 export function EstimateProvider({ children }: { children: React.ReactNode }) {
@@ -126,45 +201,95 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     completo: 0
   });
 
-  // Load initial data from localStorage
+  // Auth Listener
   useEffect(() => {
-    const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
-    const storedEstimates = localStorage.getItem(STORAGE_KEYS.ESTIMATES);
-    if (storedEstimates) {
-      setHistory(JSON.parse(storedEstimates));
-    }
-
-    const storedAppointments = localStorage.getItem(STORAGE_KEYS.APPOINTMENTS);
-    if (storedAppointments) {
-      setAppointments(JSON.parse(storedAppointments));
-    }
-
-    const storedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-    if (storedSettings) {
-      const settings = JSON.parse(storedSettings);
-      setBusinessPhoneState(settings.businessPhone || '');
-      setLaborPricePerM2(settings.laborPricePerM2 || 20);
-      if (settings.defaultPrices) {
-        setDefaultPrices(prev => ({ ...prev, ...settings.defaultPrices }));
-      }
-    }
-
-    setLoading(false);
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = (email: string) => {
-    const newUser = { id: 'local-user', email };
-    setUser(newUser);
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
-  };
+  // Load User Data
+  useEffect(() => {
+    if (!user) {
+      setHistory([]);
+      setAppointments([]);
+      return;
+    }
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem(STORAGE_KEYS.USER);
+    // Fetch Estimates
+    const fetchEstimates = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('estimates')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (!error && data) setHistory(data.map(mapDBToEstimate));
+      } catch (err) {
+        console.error("Error fetching estimates:", err);
+      }
+    };
+
+    // Fetch Appointments
+    const fetchAppointments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('appointments')
+          .select('*')
+          .order('date', { ascending: true });
+        
+        if (!error && data) setAppointments(data.map(mapDBToAppointment));
+      } catch (err) {
+        console.error("Error fetching appointments:", err);
+      }
+    };
+
+    // Fetch Settings
+    const fetchSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('user_settings')
+          .select('*')
+          .single();
+        
+        if (!error && data) {
+          setBusinessPhoneState(data.business_phone || '');
+          setLaborPricePerM2(data.labor_price_per_m2 || 20);
+          if (data.default_prices) {
+            setDefaultPrices(prev => ({ ...prev, ...data.default_prices }));
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    };
+
+    fetchEstimates();
+    fetchAppointments();
+    fetchSettings();
+
+    // Subscriptions for real-time
+    const estimatesSub = supabase
+      .channel('estimates_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'estimates' }, fetchEstimates)
+      .subscribe();
+
+    const appointmentsSub = supabase
+      .channel('appointments_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, fetchAppointments)
+      .subscribe();
+
+    return () => {
+      estimatesSub.unsubscribe();
+      appointmentsSub.unsubscribe();
+    };
+  }, [user]);
+
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
 
   const updateSettings = async (settings: { 
@@ -172,17 +297,26 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     laborPricePerM2?: number;
     defaultPrices?: Record<PricingType, number>;
   }) => {
-    const newSettings = {
-      businessPhone: settings.businessPhone !== undefined ? settings.businessPhone : businessPhone,
-      laborPricePerM2: settings.laborPricePerM2 !== undefined ? settings.laborPricePerM2 : laborPricePerM2,
-      defaultPrices: settings.defaultPrices !== undefined ? { ...defaultPrices, ...settings.defaultPrices } : defaultPrices
-    };
+    if (!user) return;
 
-    if (settings.businessPhone !== undefined) setBusinessPhoneState(settings.businessPhone);
-    if (settings.laborPricePerM2 !== undefined) setLaborPricePerM2(settings.laborPricePerM2);
-    if (settings.defaultPrices !== undefined) setDefaultPrices(prev => ({ ...prev, ...settings.defaultPrices }));
+    const updateData: any = {};
+    if (settings.businessPhone !== undefined) updateData.business_phone = settings.businessPhone;
+    if (settings.laborPricePerM2 !== undefined) updateData.labor_price_per_m2 = settings.laborPricePerM2;
+    if (settings.defaultPrices !== undefined) updateData.default_prices = { ...defaultPrices, ...settings.defaultPrices };
 
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(newSettings));
+    const { error } = await supabase
+      .from('user_settings')
+      .upsert({ 
+        uid: user.id, 
+        ...updateData,
+        updated_at: new Date().toISOString()
+      });
+
+    if (!error) {
+      if (settings.businessPhone !== undefined) setBusinessPhoneState(settings.businessPhone);
+      if (settings.laborPricePerM2 !== undefined) setLaborPricePerM2(settings.laborPricePerM2);
+      if (settings.defaultPrices !== undefined) setDefaultPrices(prev => ({ ...prev, ...settings.defaultPrices }));
+    }
   };
 
   const setBusinessPhone = async (phone: string) => {
@@ -190,45 +324,63 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const saveEstimate = async (estimateData: Omit<Estimate, 'id' | 'uid'>) => {
-    const newEstimate: Estimate = {
-      ...estimateData,
-      id: Math.random().toString(36).substr(2, 9),
-      uid: user?.id || 'local-user'
-    };
+    if (!user) return;
 
-    const newHistory = [newEstimate, ...history];
-    setHistory(newHistory);
-    localStorage.setItem(STORAGE_KEYS.ESTIMATES, JSON.stringify(newHistory));
-    return newEstimate.id;
+    const { data, error } = await supabase
+      .from('estimates')
+      .insert([{ ...mapEstimateToDB(estimateData), uid: user.id }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error saving estimate:", error);
+      return;
+    }
+
+    return data.id;
   };
 
   const getEstimateById = async (id: string): Promise<Estimate | null> => {
-    const estimate = history.find(e => e.id === id);
-    return estimate || null;
+    const { data, error } = await supabase
+      .from('estimates')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) return null;
+    return mapDBToEstimate(data);
   };
 
   const saveAppointment = async (appointmentData: Omit<Appointment, 'id' | 'uid'>) => {
-    const newAppointment: Appointment = {
-      ...appointmentData,
-      id: Math.random().toString(36).substr(2, 9),
-      uid: user?.id || 'local-user'
-    };
+    if (!user) return;
 
-    const newAppointments = [newAppointment, ...appointments];
-    setAppointments(newAppointments);
-    localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(newAppointments));
+    const { error } = await supabase
+      .from('appointments')
+      .insert([{ ...mapAppointmentToDB(appointmentData), uid: user.id }]);
+
+    if (error) console.error("Error saving appointment:", error);
   };
 
   const updateAppointment = async (updatedApp: Appointment) => {
-    const newAppointments = appointments.map(a => a.id === updatedApp.id ? updatedApp : a);
-    setAppointments(newAppointments);
-    localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(newAppointments));
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('appointments')
+      .update(mapAppointmentToDB(updatedApp))
+      .eq('id', updatedApp.id);
+
+    if (error) console.error("Error updating appointment:", error);
   };
 
   const deleteAppointment = async (id: string) => {
-    const newAppointments = appointments.filter(a => a.id !== id);
-    setAppointments(newAppointments);
-    localStorage.setItem(STORAGE_KEYS.APPOINTMENTS, JSON.stringify(newAppointments));
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('id', id);
+
+    if (error) console.error("Error deleting appointment:", error);
   };
 
   const calculateEstimate = (data: { 
@@ -319,7 +471,6 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       updateAppointment,
       deleteAppointment,
       calculateEstimate,
-      login,
       logout
     }}>
       {children}

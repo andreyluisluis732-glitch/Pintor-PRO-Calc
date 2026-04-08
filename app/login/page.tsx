@@ -2,136 +2,162 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEstimate } from '@/context/EstimateContext';
+import { Paintbrush, Mail, Lock, ArrowRight, Loader2, Chrome } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Mail, Lock, User, ArrowRight, Loader2, Paintbrush } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
-  const [isLogin, setIsLogin] = useState(true);
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const { login } = useEstimate();
+  const [error, setError] = useState<string | null>(null);
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
+    setError(null);
 
     try {
-      // Simple local login simulation
-      if (password.length < 6) {
-        throw new Error('A senha deve ter pelo menos 6 caracteres.');
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        });
+        if (error) throw error;
+        alert('Verifique seu e-mail para confirmar o cadastro!');
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        router.push('/');
       }
-      
-      login(email);
-      router.push('/');
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Ocorreu um erro. Tente novamente.');
+      setError(err.message || 'Ocorreu um erro ao autenticar');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || 'Erro ao entrar com Google');
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#f9f9fd] flex flex-col items-center justify-center p-6">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden"
+        className="w-full max-w-md space-y-8"
       >
-        <div className="p-8">
-          <div className="flex justify-center mb-8">
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
-              <Paintbrush className="text-white w-8 h-8" />
-            </div>
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mx-auto mb-4">
+            <Paintbrush size={32} />
           </div>
-
-          <h2 className="text-2xl font-bold text-slate-900 text-center mb-2">
-            {isLogin ? 'Bem-vindo de volta!' : 'Criar sua conta'}
-          </h2>
-          <p className="text-slate-500 text-center mb-8">
-            {isLogin 
-              ? 'Acesse seus orçamentos e agendamentos.' 
-              : 'Comece a gerenciar seus serviços de pintura.'}
+          <h1 className="text-3xl font-black text-[#002D5E] tracking-tighter italic uppercase">Pintor PRO Calc</h1>
+          <p className="text-on-surface-variant font-medium">
+            {isSignUp ? 'Crie sua conta profissional' : 'Entre para gerenciar seus orçamentos'}
           </p>
+        </div>
 
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl">
-              <p>{error}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+        <div className="bg-white p-8 rounded-[32px] shadow-xl shadow-primary/5 border border-outline-variant/10">
+          <form onSubmit={handleEmailLogin} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant ml-1">E-mail</label>
               <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Nome completo"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" size={18} />
+                <input 
+                  type="email"
                   required
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full h-14 pl-12 pr-4 bg-surface-low border border-outline-variant/20 rounded-2xl outline-none focus:ring-2 focus:ring-primary transition-all"
+                  placeholder="seu@email.com"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant ml-1">Senha</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" size={18} />
+                <input 
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full h-14 pl-12 pr-4 bg-surface-low border border-outline-variant/20 rounded-2xl outline-none focus:ring-2 focus:ring-primary transition-all"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <p className="text-xs text-red-500 font-bold text-center bg-red-50 py-2 rounded-lg">
+                {error}
+              </p>
             )}
 
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-              <input
-                type="email"
-                placeholder="E-mail"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-              />
-            </div>
-
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-              <input
-                type="password"
-                placeholder="Senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-              />
-            </div>
-
-            <button
+            <button 
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 group disabled:opacity-70"
+              className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-2"
             >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
+              {loading ? <Loader2 className="animate-spin" /> : (
                 <>
-                  {isLogin ? 'Entrar' : 'Criar Conta'}
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  {isSignUp ? 'Cadastrar' : 'Entrar'}
+                  <ArrowRight size={18} />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-blue-600 font-medium hover:text-blue-700 transition-colors"
-            >
-              {isLogin 
-                ? 'Não tem uma conta? Cadastre-se' 
-                : 'Já tem uma conta? Entre aqui'}
-            </button>
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-outline-variant/20"></div>
+            </div>
+            <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest">
+              <span className="bg-white px-4 text-on-surface-variant/40">Ou continue com</span>
+            </div>
           </div>
+
+          <button 
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className="w-full h-14 bg-white border border-outline-variant/20 text-[#191c1e] rounded-2xl font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-surface-low"
+          >
+            <Chrome size={20} className="text-blue-500" />
+            Google
+          </button>
         </div>
+
+        <p className="text-center text-sm font-medium text-on-surface-variant">
+          {isSignUp ? 'Já tem uma conta?' : 'Não tem uma conta?'}
+          <button 
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="ml-2 text-primary font-black uppercase tracking-widest text-[10px] hover:underline"
+          >
+            {isSignUp ? 'Fazer Login' : 'Cadastre-se'}
+          </button>
+        </p>
       </motion.div>
     </div>
   );

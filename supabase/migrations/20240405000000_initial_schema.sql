@@ -7,8 +7,8 @@ create table public.profiles (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Create settings table
-create table public.settings (
+-- Create user_settings table
+create table public.user_settings (
   uid uuid references auth.users on delete cascade not null primary key,
   business_phone text,
   labor_price_per_m2 numeric default 20,
@@ -66,7 +66,7 @@ create table public.appointments (
 
 -- Set up Row Level Security (RLS)
 alter table public.profiles enable row level security;
-alter table public.settings enable row level security;
+alter table public.user_settings enable row level security;
 alter table public.estimates enable row level security;
 alter table public.appointments enable row level security;
 
@@ -80,14 +80,14 @@ create policy "Users can insert their own profile." on public.profiles
 create policy "Users can update own profile." on public.profiles
   for update using (auth.uid() = id);
 
--- Settings policies
-create policy "Users can view their own settings." on public.settings
+-- User Settings policies
+create policy "Users can view their own settings." on public.user_settings
   for select using (auth.uid() = uid);
 
-create policy "Users can insert their own settings." on public.settings
+create policy "Users can insert their own settings." on public.user_settings
   for insert with check (auth.uid() = uid);
 
-create policy "Users can update their own settings." on public.settings
+create policy "Users can update their own settings." on public.user_settings
   for update using (auth.uid() = uid);
 
 -- Estimates policies
@@ -123,12 +123,27 @@ begin
   insert into public.profiles (id, email, display_name)
   values (new.id, new.email, new.raw_user_meta_data->>'display_name');
   
-  insert into public.settings (uid)
+  insert into public.user_settings (uid)
   values (new.id);
   
   return new;
 end;
 $$ language plpgsql security definer;
+
+-- Create storage bucket for media
+insert into storage.buckets (id, name, public)
+values ('media', 'media', true)
+on conflict (id) do nothing;
+
+-- Storage policies for media
+create policy "Media is publicly accessible." on storage.objects
+  for select using (bucket_id = 'media');
+
+create policy "Authenticated users can upload media." on storage.objects
+  for insert with check (bucket_id = 'media' and auth.role() = 'authenticated');
+
+create policy "Users can delete their own media." on storage.objects
+  for delete using (bucket_id = 'media' and auth.uid() = owner);
 
 -- Trigger for new user signup
 drop trigger if exists on_auth_user_created on auth.users;

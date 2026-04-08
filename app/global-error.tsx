@@ -8,7 +8,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <html>
+    <html lang="pt-BR">
       <body>
         <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
           <h2 className="text-3xl font-bold mb-4">Erro Crítico</h2>

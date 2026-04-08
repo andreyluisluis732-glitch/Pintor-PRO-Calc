@@ -11,6 +11,7 @@ import { Suspense, useEffect } from 'react';
 
 import { useEstimate, PropertyType, PricingType } from '@/context/EstimateContext';
 import { PRODUCT_CATALOG, PaintProduct } from '@/constants/catalog';
+import { supabase } from '@/lib/supabase';
 
 export default function CalculatePage() {
   return (
@@ -70,14 +71,28 @@ function CalculateContent() {
     setError(null);
     
     try {
-      // Mock upload for local storage version
-      const urls: string[] = mediaFiles.map(file => URL.createObjectURL(file));
+      const urls: string[] = [];
       
-      // Simulate a small delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      for (const file of mediaFiles) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `estimates/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('media')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('media')
+          .getPublicUrl(filePath);
+
+        urls.push(publicUrl);
+      }
       
       return urls;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro geral no upload:", err);
       setError("O envio de arquivos falhou. Você pode continuar o orçamento sem as fotos.");
       return [];

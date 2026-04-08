@@ -18,7 +18,7 @@ export default function Home() {
   };
 
   const handleSignOut = async () => {
-    logout();
+    await logout();
   };
 
   const displayName = user?.email?.split('@')[0] || 'Profissional';
