@@ -18,7 +18,7 @@ import {
   Ruler,
   Tag
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 
 export default function SharePage() {
@@ -27,6 +27,11 @@ export default function SharePage() {
   const { getEstimateById, businessPhone } = useEstimate();
   const [estimate, setEstimate] = useState<Estimate | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const pricingLabels: Record<string, string> = {
     m2: 'Por metro quadrado (m²)',
@@ -42,11 +47,20 @@ export default function SharePage() {
       if (typeof id === 'string') {
         const data = await getEstimateById(id);
         setEstimate(data);
+        setLoading(false);
       }
       setLoading(false);
     }
     loadEstimate();
   }, [id, getEstimateById]);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);

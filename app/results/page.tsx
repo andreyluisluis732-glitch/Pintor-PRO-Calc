@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon, Palette } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 import Image from 'next/image';
 import { useEstimate } from '@/context/EstimateContext';
@@ -13,6 +13,11 @@ import { PRODUCT_CATALOG } from '@/constants/catalog';
 export default function ResultsPage() {
   const router = useRouter();
   const { currentEstimate, saveEstimate, user, businessPhone } = useEstimate();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const pricingLabels: Record<string, string> = {
     m2: 'Por metro quadrado (m²)',
@@ -47,6 +52,14 @@ export default function ResultsPage() {
     }
     prepareShare();
   }, [currentEstimate, saveEstimate, shareUrl, saving, user]);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!currentEstimate.totalCost) {
     return (
@@ -111,7 +124,7 @@ export default function ResultsPage() {
   const handleSave = () => {
     saveEstimate({
       ...currentEstimate as any,
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       title: currentEstimate.clientName 
         ? `${currentEstimate.propertyType || 'Obra'}: ${currentEstimate.clientName}` 
         : `${currentEstimate.propertyType || 'Projeto'} ${currentEstimate.area}m²`,

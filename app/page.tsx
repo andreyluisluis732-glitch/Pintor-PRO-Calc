@@ -1,214 +1,288 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { Calculator, MessageSquare, History, Ruler, DraftingCompass, Database, HelpCircle, ArrowRight } from 'lucide-react';
-import { motion } from 'motion/react';
-import BottomNav from '@/components/BottomNav';
+import { 
+  CheckCircle2, 
+  Paintbrush, 
+  Zap, 
+  ShieldCheck, 
+  Smartphone, 
+  MessageCircle, 
+  ArrowRight,
+  Star,
+  Clock,
+  TrendingUp
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 
-import { useEstimate } from '@/context/EstimateContext';
+export default function SalesPage() {
+  const checkoutUrl = "https://pay.cakto.com.br/qim4js2_840385";
+  const [mounted, setMounted] = React.useState(false);
 
-export default function Home() {
-  const { history, user, logout } = useEstimate();
-  const lastEstimate = history[0];
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-  };
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
-  const handleSignOut = async () => {
-    await logout();
-  };
-
-  const displayName = user?.email?.split('@')[0] || 'Profissional';
+  const features = [
+    {
+      icon: <Clock className="text-primary" />,
+      title: "Orçamentos em 30 Segundos",
+      description: "Pare de perder tempo com cálculos manuais. Gere orçamentos profissionais na hora, na frente do cliente."
+    },
+    {
+      icon: <MessageCircle className="text-green-500" />,
+      title: "Integração Total com WhatsApp",
+      description: "Envie o orçamento direto para o celular do cliente com um link profissional e interativo."
+    },
+    {
+      icon: <TrendingUp className="text-blue-500" />,
+      title: "Feche 3x Mais Serviços",
+      description: "A apresentação profissional passa confiança. Clientes preferem quem entrega um orçamento detalhado e rápido."
+    },
+    {
+      icon: <Smartphone className="text-purple-500" />,
+      title: "Tudo no seu Celular",
+      description: "Acesse de qualquer lugar. Gerencie seus clientes, agendamentos e histórico de obras na palma da mão."
+    }
+  ];
 
   return (
-    <div className="min-h-screen flex flex-col pb-24 bg-[#f0f2f5]">
-      {/* Top Navigation Bar */}
-      <header className="w-full top-0 sticky z-40 bg-[#f0f2f5] shadow-none">
-        <div className="flex items-center justify-between px-6 py-4 w-full max-w-md mx-auto">
-          <div className="flex flex-col">
-            <div className="text-[#002D5E] font-black tracking-tighter text-xl italic uppercase">
-              Pintor PRO Calc
-            </div>
-            {user && (
-              <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-                Olá, {displayName.split(' ')[0]}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={handleSignOut}
-              className="text-[#43474f] hover:bg-[#e7e8eb] transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center gap-2"
-              title="Sair"
-            >
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                {displayName[0].toUpperCase()}
-              </div>
-            </button>
-          </div>
+    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-primary/20">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden pt-20 pb-32 lg:pt-32 lg:pb-40 bg-gradient-to-b from-slate-50 to-white">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full opacity-10 pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary rounded-full blur-[120px]" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-400 rounded-full blur-[120px]" />
         </div>
-      </header>
 
-      <main className="flex-1 flex flex-col items-center px-6 relative overflow-hidden">
-        {/* Background Decorative Layer */}
-        <div className="absolute inset-0 bg-architectural-grid pointer-events-none" />
-        
-        <div className="max-w-md w-full z-10 space-y-12 pt-8">
-          {/* Hero Content */}
-          <div className="space-y-6 text-center">
-            <motion.div 
-              initial={{ opacity: 0, y: -20 }}
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="max-w-4xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed-variant rounded-full text-[10px] font-bold tracking-widest uppercase mb-4"
+              transition={{ duration: 0.5 }}
             >
-              <Ruler size={14} className="mr-1" />
-              Painel de Precisão
+              <span className="inline-block py-1 px-3 rounded-full bg-primary/10 text-primary text-xs font-black uppercase tracking-widest mb-6">
+                O Aplicativo Nº 1 para Pintores Profissionais
+              </span>
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.9] mb-8 text-slate-900 italic">
+                PARE DE PERDER DINHEIRO COM <span className="text-primary">ORÇAMENTOS AMADORES!</span>
+              </h1>
+              <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto font-medium">
+                Transforme seu celular em uma máquina de vendas. Gere orçamentos profissionais, calcule materiais e feche mais serviços em segundos.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a 
+                  href={checkoutUrl}
+                  className="w-full sm:w-auto px-8 py-5 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-2xl shadow-primary/40 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                  Quero Acesso Agora
+                  <ArrowRight size={20} />
+                </a>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  Acesso vitalício por apenas R$ 50,00
+                </p>
+              </div>
             </motion.div>
-            
-            <motion.h1 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-              className="text-4xl md:text-5xl font-sans font-extrabold tracking-tighter text-[#191c1e] leading-[1.1]"
-            >
-              Calcule seu orçamento de pintura em <span className="text-[#e17b00]">segundos</span>
-            </motion.h1>
-            
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="text-on-surface-variant text-base md:text-lg leading-relaxed max-w-[85%] mx-auto"
-            >
-              A ferramenta definitiva para pintores profissionais que buscam exatidão em cada galão e metro quadrado.
-            </motion.p>
           </div>
-
-          {/* Visual Graphic Card */}
-          <motion.div 
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="relative group"
-          >
-            <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-xl opacity-10 group-hover:opacity-20 transition duration-1000" />
-            <div className="relative bg-white border border-outline-variant/10 rounded-xl overflow-hidden shadow-sm">
-              <div className="relative w-full aspect-square">
-                <Image 
-                  src="https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=800&auto=format&fit=crop" 
-                  alt="Pintor Profissional em Trabalho"
-                  fill
-                  className="object-cover transition-all duration-700"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-              <div className="p-4 flex justify-between items-center bg-surface-low">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-white">
-                    <Ruler size={20} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Precisão de Cálculo</p>
-                    <p className="text-sm font-semibold text-[#191c1e]">Margem de erro &lt; 1%</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Action Cluster */}
-          <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-1 gap-4">
-              <Link href="/calculate" className="group">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 hover:border-primary/50 transition-all active:scale-95">
-                  <div className="flex items-center gap-4 mb-3">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                      <Calculator size={24} />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="font-bold text-lg text-[#191c1e]">Orçamento Completo</h3>
-                      <p className="text-xs text-on-surface-variant">Cálculo detalhado de materiais e mão de obra</p>
-                    </div>
-                  </div>
-                  <div className="w-full h-12 bg-primary text-white font-bold rounded-xl flex items-center justify-center gap-2">
-                    Começar Agora
-                  </div>
-                </div>
-              </Link>
-
-              <Link href="/schedule" className="group">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 hover:border-secondary/50 transition-all active:scale-95">
-                  <div className="flex items-center gap-4 mb-3">
-                    <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
-                      <MessageSquare size={24} />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="font-bold text-lg text-[#191c1e]">Consultoria Técnica</h3>
-                      <p className="text-xs text-on-surface-variant">Agende uma visita para medição e avaliação</p>
-                    </div>
-                  </div>
-                  <div className="w-full h-12 bg-secondary text-white font-bold rounded-xl flex items-center justify-center gap-2">
-                    Agendar Consulta
-                  </div>
-                </div>
-              </Link>
-            </div>
-
-            {user && (
-              <Link href="/history">
-                <button className="w-full h-14 bg-surface-container-high text-on-secondary-container font-semibold rounded-xl hover:bg-surface-container-highest transition-colors active:scale-95 duration-150 flex items-center justify-center gap-2">
-                  <History size={20} />
-                  Ver Histórico de Orçamentos
-                </button>
-              </Link>
-            )}
-
-            <Link href="/help">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 hover:border-primary/50 transition-all active:scale-95 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                  <HelpCircle size={24} />
-                </div>
-                <div className="text-left flex-1">
-                  <h3 className="font-bold text-lg text-[#191c1e]">Precisa de Ajuda?</h3>
-                  <p className="text-xs text-on-surface-variant">Dúvidas sobre como fazer seu orçamento ou consulta?</p>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <ArrowRight size={16} />
-                </div>
-              </div>
-            </Link>
-          </div>
-
-          {/* Recent Projects Preview - Only for Professional */}
-          {user && (
-            <div className="bg-surface-low rounded-xl p-4">
-              <h3 className="font-sans font-semibold tracking-wider text-xs uppercase text-on-surface-variant mb-4">Últimos Orçamentos</h3>
-              <div className="space-y-3">
-                {history.length === 0 ? (
-                  <div className="text-center py-4 text-on-surface-variant text-xs italic">
-                    Nenhum orçamento recente
-                  </div>
-                ) : (
-                  history.slice(0, 3).map((est) => (
-                    <div key={est.id} className="bg-white p-3 rounded-md flex justify-between items-center shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <History size={18} className="text-secondary" />
-                        <span className="text-sm font-medium">{est.title}</span>
-                      </div>
-                      <span className="text-sm font-bold text-primary">{formatCurrency(est.totalCost || 0)}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
         </div>
-      </main>
+      </section>
 
-      <BottomNav />
+      {/* Social Proof / Trust */}
+      <section className="py-12 border-y border-slate-100 bg-white">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-50 grayscale">
+            <div className="flex items-center gap-2 font-black italic text-xl">PINTOR PRO</div>
+            <div className="flex items-center gap-2 font-black italic text-xl">OBRA FÁCIL</div>
+            <div className="flex items-center gap-2 font-black italic text-xl">MESTRE DAS CORES</div>
+            <div className="flex items-center gap-2 font-black italic text-xl">REFORMA JÁ</div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Grid */}
+      <section className="py-24 bg-white">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-3xl md:text-5xl font-black tracking-tighter italic mb-4">
+              POR QUE VOCÊ PRECISA DISSO?
+            </h2>
+            <p className="text-slate-500 font-medium">O mercado mudou. Quem não é profissional, fica para trás.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, index) => (
+              <motion.div 
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="p-8 rounded-3xl bg-slate-50 border border-slate-100 hover:border-primary/20 transition-all group"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  {feature.icon}
+                </div>
+                <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+                <p className="text-slate-500 text-sm leading-relaxed font-medium">
+                  {feature.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* The "Matadora" Offer Section */}
+      <section className="py-24 bg-slate-900 text-white relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
+          <Image 
+            src="https://picsum.photos/seed/painting/1920/1080?blur=10" 
+            alt="Background" 
+            fill 
+            className="object-cover"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="max-w-5xl mx-auto bg-white/5 backdrop-blur-xl rounded-[40px] p-8 md:p-16 border border-white/10 shadow-2xl">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div>
+                <span className="text-primary font-black uppercase tracking-[0.3em] text-xs mb-4 block">Oferta Exclusiva</span>
+                <h2 className="text-4xl md:text-6xl font-black tracking-tighter italic mb-6 leading-none">
+                  OFERTA ÚNICA: <br />
+                  <span className="text-primary">ACESSO VITALÍCIO</span>
+                </h2>
+                <ul className="space-y-4 mb-10">
+                  {[
+                    "Gerador de Orçamentos Ilimitado",
+                    "Calculadora de Tintas e Materiais",
+                    "Gestão de Agendamentos e Clientes",
+                    "Link de Compartilhamento Profissional",
+                    "Suporte e Atualizações Gratuitas",
+                    "Sem Mensalidades - Pague uma vez"
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-slate-300 font-medium">
+                      <CheckCircle2 size={20} className="text-primary shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="bg-white text-slate-900 rounded-3xl p-8 md:p-12 text-center shadow-2xl relative">
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-primary text-white px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-xl">
+                  Melhor Escolha
+                </div>
+                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-2">De R$ 197,00 por apenas</p>
+                <div className="flex items-center justify-center gap-1 mb-6">
+                  <span className="text-2xl font-black self-start mt-2">R$</span>
+                  <span className="text-7xl md:text-8xl font-black tracking-tighter italic">50</span>
+                  <span className="text-2xl font-black self-end mb-4">,00</span>
+                </div>
+                <p className="text-slate-500 text-sm font-medium mb-8">
+                  Pagamento único. Sem taxas escondidas. <br />
+                  Acesso imediato após a confirmação.
+                </p>
+                <a 
+                  href={checkoutUrl}
+                  className="w-full py-6 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-primary/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                  Garantir Meu Acesso
+                  <ArrowRight size={20} />
+                </a>
+                <div className="mt-6 flex items-center justify-center gap-4 text-slate-400">
+                  <ShieldCheck size={16} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Compra 100% Segura</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-24 bg-slate-50">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-black tracking-tighter italic mb-2">QUEM JÁ USA, RECOMENDA</h2>
+            <div className="flex justify-center gap-1 text-yellow-400">
+              <Star size={20} fill="currentColor" />
+              <Star size={20} fill="currentColor" />
+              <Star size={20} fill="currentColor" />
+              <Star size={20} fill="currentColor" />
+              <Star size={20} fill="currentColor" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Ricardo Silva",
+                role: "Pintor há 12 anos",
+                text: "Antes eu perdia horas fazendo conta e o cliente achava caro. Agora mando o link profissional e eles fecham na hora. Valeu cada centavo!"
+              },
+              {
+                name: "Marcos Oliveira",
+                role: "Pintura Residencial",
+                text: "O cálculo de tinta é perfeito. Não sobra e nem falta material na obra. O app se pagou no primeiro serviço que fechei com ele."
+              },
+              {
+                name: "André Santos",
+                role: "Especialista em Texturas",
+                text: "A organização é o que mais gostei. Tenho todos os orçamentos salvos e sei exatamente quanto ganhei no mês. Recomendo demais!"
+              }
+            ].map((t, i) => (
+              <div key={i} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+                <p className="text-slate-600 italic mb-6 font-medium">&quot;{t.text}&quot;</p>
+                <div>
+                  <p className="font-bold text-slate-900">{t.name}</p>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{t.role}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer CTA */}
+      <section className="py-24 bg-white border-t border-slate-100">
+        <div className="container mx-auto px-6 text-center">
+          <h2 className="text-3xl md:text-5xl font-black tracking-tighter italic mb-8">
+            O PRÓXIMO NÍVEL DA SUA <br />
+            CARREIRA COMEÇA AQUI.
+          </h2>
+          <a 
+            href={checkoutUrl}
+            className="inline-flex px-12 py-6 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-2xl shadow-primary/40 hover:scale-105 active:scale-95 transition-all items-center gap-3"
+          >
+            Começar Agora por R$ 50,00
+            <ArrowRight size={20} />
+          </a>
+          <p className="mt-8 text-slate-400 text-xs font-bold uppercase tracking-widest">
+            Garantia de Satisfação de 7 Dias
+          </p>
+        </div>
+      </section>
+
+      <footer className="py-12 bg-slate-50 border-t border-slate-100">
+        <div className="container mx-auto px-6 text-center">
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em]">
+            © 2026 PINTOR PRO APP - TODOS OS DIREITOS RESERVADOS
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

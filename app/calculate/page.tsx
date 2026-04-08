@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, ArrowRight, Ruler, Info, Palette, Tag, HelpCircle, Clock, Settings, Paintbrush, Image as ImageIcon } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 import { Suspense, useEffect } from 'react';
 
@@ -25,7 +25,8 @@ function CalculateContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { calculateEstimate, setCurrentEstimate, laborPricePerM2, defaultPrices } = useEstimate();
-  
+  const [mounted, setMounted] = useState(false);
+
   const initialProductId = searchParams?.get('productId') || PRODUCT_CATALOG[2].id;
   const initialProduct = PRODUCT_CATALOG.find(p => p.id === initialProductId) || PRODUCT_CATALOG[2];
 
@@ -48,6 +49,18 @@ function CalculateContent() {
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const categories = Array.from(new Set(PRODUCT_CATALOG.map(p => p.category)));
   const filteredProducts = PRODUCT_CATALOG.filter(p => p.category === activeCategory);

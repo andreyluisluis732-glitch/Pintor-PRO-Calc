@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Phone, User, CheckCircle2, Share2, Copy, Edit2 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 import { useEstimate, PricingType } from '@/context/EstimateContext';
 
@@ -15,11 +15,21 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     setPhone(businessPhone);
     setPrices(defaultPrices);
   }, [businessPhone, defaultPrices]);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const handleSave = async () => {
     setSaving(true);

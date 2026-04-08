@@ -211,14 +211,8 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Load User Data
+  // Load Data
   useEffect(() => {
-    if (!user) {
-      setHistory([]);
-      setAppointments([]);
-      return;
-    }
-
     // Fetch Estimates
     const fetchEstimates = async () => {
       try {
@@ -286,7 +280,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       estimatesSub.unsubscribe();
       appointmentsSub.unsubscribe();
     };
-  }, [user]);
+  }, []);
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -297,8 +291,6 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     laborPricePerM2?: number;
     defaultPrices?: Record<PricingType, number>;
   }) => {
-    if (!user) return;
-
     const updateData: any = {};
     if (settings.businessPhone !== undefined) updateData.business_phone = settings.businessPhone;
     if (settings.laborPricePerM2 !== undefined) updateData.labor_price_per_m2 = settings.laborPricePerM2;
@@ -307,7 +299,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase
       .from('user_settings')
       .upsert({ 
-        uid: user.id, 
+        uid: user?.id || 'guest', 
         ...updateData,
         updated_at: new Date().toISOString()
       });
@@ -324,11 +316,9 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const saveEstimate = async (estimateData: Omit<Estimate, 'id' | 'uid'>) => {
-    if (!user) return;
-
     const { data, error } = await supabase
       .from('estimates')
-      .insert([{ ...mapEstimateToDB(estimateData), uid: user.id }])
+      .insert([{ ...mapEstimateToDB(estimateData), uid: user?.id || 'guest' }])
       .select()
       .single();
 
@@ -352,18 +342,14 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const saveAppointment = async (appointmentData: Omit<Appointment, 'id' | 'uid'>) => {
-    if (!user) return;
-
     const { error } = await supabase
       .from('appointments')
-      .insert([{ ...mapAppointmentToDB(appointmentData), uid: user.id }]);
+      .insert([{ ...mapAppointmentToDB(appointmentData), uid: user?.id || 'guest' }]);
 
     if (error) console.error("Error saving appointment:", error);
   };
 
   const updateAppointment = async (updatedApp: Appointment) => {
-    if (!user) return;
-
     const { error } = await supabase
       .from('appointments')
       .update(mapAppointmentToDB(updatedApp))
@@ -373,8 +359,6 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteAppointment = async (id: string) => {
-    if (!user) return;
-
     const { error } = await supabase
       .from('appointments')
       .delete()

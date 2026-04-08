@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, Search, Calendar, Ruler, MoreHorizontal, Paintbrush, Quote, History, Plus, Clock, CheckCircle2, Phone, Mail, MapPin, FileText, X, Edit2, Trash2, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 
 import { useEstimate, Appointment } from '@/context/EstimateContext';
@@ -20,6 +20,14 @@ export default function HistoryPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { 

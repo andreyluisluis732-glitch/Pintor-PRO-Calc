@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, MoreVertical, User, CheckCircle2, Send } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 
 import { useEstimate, Estimate } from '@/context/EstimateContext';
@@ -13,9 +13,14 @@ import { PRODUCT_CATALOG } from '@/constants/catalog';
 export default function ReviewPage() {
   const router = useRouter();
   const { currentEstimate, saveEstimate, businessPhone } = useEstimate();
+  const [mounted, setMounted] = React.useState(false);
 
   const [shareUrl, setShareUrl] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const product = PRODUCT_CATALOG.find(p => p.id === currentEstimate.productId) || PRODUCT_CATALOG[0];
 
@@ -38,6 +43,14 @@ export default function ReviewPage() {
     }
     prepareShare();
   }, [currentEstimate, saveEstimate, shareUrl, saving]);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!currentEstimate.totalCost) {
     return (

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Calendar as CalendarIcon, Clock, CheckCircle2, Trash2, Plus, Edit2, Phone, Mail, MapPin, FileText, X, Loader2, HelpCircle, Send, Check } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 import { useEstimate, Appointment } from '@/context/EstimateContext';
 
@@ -21,6 +21,7 @@ export default function SchedulePage() {
     setMounted(true);
     if (!user) setIsAdding(true);
   }, [user]);
+
   const [newApp, setNewApp] = useState({
     clientName: '',
     clientPhone: '',
@@ -88,6 +89,14 @@ export default function SchedulePage() {
   };
 
   const [savedWhatsAppUrl, setSavedWhatsAppUrl] = useState<string | null>(null);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const handleSave = async () => {
     if (!newApp.clientName || !newApp.clientPhone) return;
