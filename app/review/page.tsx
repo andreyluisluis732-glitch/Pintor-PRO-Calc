@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, MoreVertical, User, CheckCircle2, Send } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import BottomNav from '@/components/BottomNav';
 
 import { useEstimate, Estimate } from '@/context/EstimateContext';

@@ -11,13 +11,12 @@ const navItems = [
   { name: 'Calcular', icon: Calculator, href: '/calculate' },
   { name: 'Agenda', icon: CalendarIcon, href: '/schedule' },
   { name: 'Catálogo', icon: BookOpen, href: '/catalog' },
-  { name: 'Histórico', icon: ClipboardList, href: '/history', professionalOnly: true },
-  { name: 'Ajustes', icon: Settings, href: '/settings', professionalOnly: true },
+  { name: 'Histórico', icon: ClipboardList, href: '/history' },
+  { name: 'Ajustes', icon: Settings, href: '/settings' },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const { user } = useEstimate();
 
   const visibleItems = navItems;
 

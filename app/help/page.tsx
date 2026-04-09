@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, HelpCircle, Send, Loader2, CheckCircle2, Info, Calculator, MessageSquare } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import BottomNav from '@/components/BottomNav';
 import { GoogleGenAI } from "@google/genai";
 

@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Calculator, MessageSquare, History, Ruler, HelpCircle, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import BottomNav from '@/components/BottomNav';
 import Image from 'next/image';
 

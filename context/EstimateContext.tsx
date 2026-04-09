@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { PRODUCT_CATALOG } from '@/constants/catalog';
 import { supabase } from '@/lib/supabase';
-import { User } from '@supabase/supabase-js';
 
 export type PropertyType = 'Casa' | 'Apartamento' | 'Prédio' | 'Galpão' | 'Condomínio' | 'Comercial';
 
@@ -53,7 +52,6 @@ export interface Estimate {
 }
 
 interface EstimateContextType {
-  user: User | null;
   loading: boolean;
   currentEstimate: Partial<Estimate>;
   setCurrentEstimate: (estimate: Partial<Estimate>) => void;
@@ -92,7 +90,6 @@ interface EstimateContextType {
     mediaUrls?: string[];
     notes?: string;
   }) => void;
-  logout: () => Promise<void>;
 }
 
 const EstimateContext = createContext<EstimateContextType | undefined>(undefined);
@@ -185,8 +182,7 @@ const mapAppointmentToDB = (app: Partial<Appointment>) => {
 };
 
 export function EstimateProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [currentEstimate, setCurrentEstimate] = useState<Partial<Estimate>>({});
   const [history, setHistory] = useState<Estimate[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -201,18 +197,9 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     completo: 0
   });
 
-  // Auth Listener
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   // Load Data
   useEffect(() => {
+    setLoading(true);
     // Fetch Estimates
     const fetchEstimates = async () => {
       try {
@@ -264,6 +251,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     fetchEstimates();
     fetchAppointments();
     fetchSettings();
+    setLoading(false);
 
     // Subscriptions for real-time
     const estimatesSub = supabase
@@ -299,7 +287,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase
       .from('user_settings')
       .upsert({ 
-        uid: user?.id || 'guest', 
+        uid: 'guest', 
         ...updateData,
         updated_at: new Date().toISOString()
       });
@@ -318,7 +306,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const saveEstimate = async (estimateData: Omit<Estimate, 'id' | 'uid'>) => {
     const { data, error } = await supabase
       .from('estimates')
-      .insert([{ ...mapEstimateToDB(estimateData), uid: user?.id || 'guest' }])
+      .insert([{ ...mapEstimateToDB(estimateData), uid: 'guest' }])
       .select()
       .single();
 
@@ -344,7 +332,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const saveAppointment = async (appointmentData: Omit<Appointment, 'id' | 'uid'>) => {
     const { error } = await supabase
       .from('appointments')
-      .insert([{ ...mapAppointmentToDB(appointmentData), uid: user?.id || 'guest' }]);
+      .insert([{ ...mapAppointmentToDB(appointmentData), uid: 'guest' }]);
 
     if (error) console.error("Error saving appointment:", error);
   };
@@ -438,7 +426,6 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <EstimateContext.Provider value={{ 
-      user,
       loading,
       currentEstimate, 
       setCurrentEstimate, 
@@ -454,8 +441,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       saveAppointment,
       updateAppointment,
       deleteAppointment,
-      calculateEstimate,
-      logout
+      calculateEstimate
     }}>
       {children}
     </EstimateContext.Provider>

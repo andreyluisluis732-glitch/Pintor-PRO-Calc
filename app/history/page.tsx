@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, Search, Calendar, Ruler, MoreHorizontal, Paintbrush, Quote, History, Plus, Clock, CheckCircle2, Phone, Mail, MapPin, FileText, X, Edit2, Trash2, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import BottomNav from '@/components/BottomNav';
 
 import { useEstimate, Appointment } from '@/context/EstimateContext';
