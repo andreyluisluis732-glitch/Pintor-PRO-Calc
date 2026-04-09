@@ -9,7 +9,7 @@ import { useEstimate, PricingType } from '@/context/EstimateContext';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { businessPhone, laborPricePerM2, defaultPrices, updateSettings, user } = useEstimate();
+  const { businessPhone, laborPricePerM2, defaultPrices, updateSettings } = useEstimate();
   const [phone, setPhone] = useState(businessPhone);
   const [prices, setPrices] = useState(defaultPrices);
   const [saving, setSaving] = useState(false);
@@ -83,7 +83,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 className="font-bold text-[#191c1e]">Perfil Profissional</h2>
-                  <p className="text-xs text-on-surface-variant">{user?.email}</p>
+                  <p className="text-xs text-on-surface-variant">Configurações do App</p>
                 </div>
               </div>
               {!isEditing && (

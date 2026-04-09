@@ -270,10 +270,6 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-  };
-
   const updateSettings = async (settings: { 
     businessPhone?: string; 
     laborPricePerM2?: number;

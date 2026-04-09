@@ -12,7 +12,7 @@ import { PRODUCT_CATALOG } from '@/constants/catalog';
 
 export default function ResultsPage() {
   const router = useRouter();
-  const { currentEstimate, saveEstimate, user, businessPhone } = useEstimate();
+  const { currentEstimate, saveEstimate, businessPhone } = useEstimate();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -35,7 +35,7 @@ export default function ResultsPage() {
 
   React.useEffect(() => {
     async function prepareShare() {
-      if (!user && currentEstimate.totalCost && !shareUrl && !saving) {
+      if (currentEstimate.totalCost && !shareUrl && !saving) {
         setSaving(true);
         try {
           const id = await saveEstimate(currentEstimate as any);
@@ -51,7 +51,7 @@ export default function ResultsPage() {
       }
     }
     prepareShare();
-  }, [currentEstimate, saveEstimate, shareUrl, saving, user]);
+  }, [currentEstimate, saveEstimate, shareUrl, saving]);
 
   if (!mounted) {
     return (
@@ -356,33 +356,21 @@ export default function ResultsPage() {
 
         {/* Call to Action */}
         <div className="pt-4 space-y-4">
-          {user && (
-            <button 
-              onClick={() => router.push('/review')}
-              className="w-full bg-primary text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg active:scale-95 duration-150 transition-transform"
-            >
-              <Send size={20} />
-              Revisar e Enviar para Cliente
-            </button>
-          )}
-
-          {!user && (
-            <a 
-              href={getWhatsAppUrl()}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => {
-                if (!businessPhone) {
-                  e.preventDefault();
-                  alert('O consultor ainda não configurou o número de WhatsApp.');
-                }
-              }}
-              className="w-full bg-gradient-to-b from-[#25D366] to-[#128C7E] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg active:scale-95 duration-150 transition-transform"
-            >
-              <Send size={20} />
-              Enviar Orçamento para o Consultor
-            </a>
-          )}
+          <a 
+            href={getWhatsAppUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              if (!businessPhone) {
+                e.preventDefault();
+                alert('O consultor ainda não configurou o número de WhatsApp.');
+              }
+            }}
+            className="w-full bg-gradient-to-b from-[#25D366] to-[#128C7E] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg active:scale-95 duration-150 transition-transform"
+          >
+            <Send size={20} />
+            Enviar Orçamento para o Consultor
+          </a>
           
           <button 
             onClick={() => router.push('/schedule')}
