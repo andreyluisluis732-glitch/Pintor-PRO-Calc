@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Phone, User, CheckCircle2, Share2, Copy, Edit2 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 import { useEstimate, PricingType } from '@/context/EstimateContext';
 

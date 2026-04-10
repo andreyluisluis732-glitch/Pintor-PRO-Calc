@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon, Palette } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 import Image from 'next/image';
 import { useEstimate } from '@/context/EstimateContext';

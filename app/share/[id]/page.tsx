@@ -18,11 +18,12 @@ import {
   Ruler,
   Tag
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 
 export default function SharePage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string | undefined;
   const router = useRouter();
   const { getEstimateById, businessPhone } = useEstimate();
   const [estimate, setEstimate] = useState<Estimate | null>(null);

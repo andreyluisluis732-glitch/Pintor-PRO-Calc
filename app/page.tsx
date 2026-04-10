@@ -13,7 +13,7 @@ import {
   Clock,
   TrendingUp
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 
 export default function SalesPage() {
