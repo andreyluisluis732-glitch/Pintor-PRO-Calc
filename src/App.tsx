@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import ClientLayout from './components/ClientLayout';
 import Home from './pages/Home';
 import Calculate from './pages/Calculate';
@@ -29,6 +30,7 @@ function App() {
           <Route path="/supabase-test" element={<SupabaseTest />} />
         </Routes>
       </ClientLayout>
+      <Analytics />
     </Router>
   );
 }
