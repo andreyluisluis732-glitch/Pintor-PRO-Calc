@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db, firebaseConfig } from '../lib/firebase';
+import { useEstimate } from '../context/EstimateContext';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -21,6 +22,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [setupError, setSetupError] = useState(false);
+  const { loginLocally } = useEstimate();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -72,6 +74,12 @@ export default function LoginPage() {
 
     try {
       if (isLogin) {
+        // Try local login first if it's a "local" email pattern or if user wants to bypass
+        if (email === 'local@device.com') {
+          loginLocally(name || 'Profissional');
+          navigate('/');
+          return;
+        }
         await signInWithEmailAndPassword(auth, email, password);
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -106,6 +114,15 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLocalLogin = () => {
+    if (!name && !isLogin) {
+      setError('Por favor, digite seu nome.');
+      return;
+    }
+    loginLocally(name || 'Profissional');
+    navigate('/');
   };
 
   const consoleUrl = `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/providers`;
@@ -165,10 +182,10 @@ export default function LoginPage() {
                       <ExternalLink size={14} />
                     </a>
                     <button 
-                      onClick={() => navigate('/')}
+                      onClick={handleLocalLogin}
                       className="w-full py-2 text-amber-700 text-[10px] font-black uppercase tracking-widest hover:text-amber-900 transition-colors"
                     >
-                      Pular e entrar como convidado
+                      Entrar sem Firebase (Modo Local)
                     </button>
                   </div>
                 </div>
@@ -283,10 +300,10 @@ export default function LoginPage() {
 
             <div className="pt-2">
               <button
-                onClick={() => navigate('/')}
+                onClick={handleLocalLogin}
                 className="text-slate-400 font-bold hover:text-slate-600 transition-colors text-[10px] uppercase tracking-widest"
               >
-                Entrar como Convidado (Modo Offline)
+                Entrar sem Firebase (Modo Local)
               </button>
             </div>
           </div>

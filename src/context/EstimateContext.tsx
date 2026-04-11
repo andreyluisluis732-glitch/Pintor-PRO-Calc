@@ -115,8 +115,15 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
+interface LocalUser {
+  uid: string;
+  displayName: string;
+  email: string;
+  isLocal: boolean;
+}
+
 interface EstimateContextType {
-  user: User | null;
+  user: User | LocalUser | null;
   loading: boolean;
   currentEstimate: Partial<Estimate>;
   setCurrentEstimate: (estimate: Partial<Estimate>) => void;
@@ -126,6 +133,8 @@ interface EstimateContextType {
   laborPricePerM2: number;
   defaultPrices: Record<PricingType, number>;
   setBusinessPhone: (phone: string) => Promise<void>;
+  loginLocally: (name: string) => void;
+  logout: () => Promise<void>;
   updateSettings: (settings: { 
     businessPhone?: string; 
     laborPricePerM2?: number;
@@ -159,7 +168,7 @@ interface EstimateContextType {
 const EstimateContext = createContext<EstimateContextType | undefined>(undefined);
 
 export function EstimateProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | LocalUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentEstimate, setCurrentEstimate] = useState<Partial<Estimate>>({});
   const [history, setHistory] = useState<Estimate[]>([]);
@@ -175,6 +184,19 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     completo: 0
   });
   const [professionalUid, setProfessionalUid] = useState<string | null>(null);
+
+  // Load local user on mount
+  useEffect(() => {
+    const savedLocalUser = localStorage.getItem('localUser');
+    if (savedLocalUser) {
+      try {
+        const parsed = JSON.parse(savedLocalUser);
+        setTimeout(() => setUser(parsed), 0);
+      } catch (e) {
+        console.error("Error parsing local user", e);
+      }
+    }
+  }, []);
 
   // Test connection
   useEffect(() => {
@@ -192,8 +214,18 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
 
   // Auth listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+      } else {
+        // If no firebase user, check if we have a local user
+        const savedLocalUser = localStorage.getItem('localUser');
+        if (savedLocalUser) {
+          setUser(JSON.parse(savedLocalUser));
+        } else {
+          setUser(null);
+        }
+      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -205,7 +237,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     let unsubAppointments = () => {};
     let unsubSettings = () => {};
 
-    if (user) {
+    if (user && !('isLocal' in user)) {
       const estimatesQuery = query(collection(db, 'estimates'), where('uid', '==', user.uid));
       unsubEstimates = onSnapshot(estimatesQuery, (snapshot) => {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Estimate));
@@ -236,11 +268,27 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
         handleFirestoreError(error, OperationType.GET, `settings/${user.uid}`);
       });
     } else {
-      setTimeout(() => {
-        setHistory([]);
-        setAppointments([]);
-      }, 0);
-      
+      // Load local history and appointments for local users or guests
+      const savedHistory = localStorage.getItem('guestHistory');
+      if (savedHistory) {
+        try {
+          const parsed = JSON.parse(savedHistory);
+          setTimeout(() => setHistory(parsed), 0);
+        } catch (e) {
+          console.error("Error parsing local history", e);
+        }
+      }
+
+      const savedAppointments = localStorage.getItem('guestAppointments');
+      if (savedAppointments) {
+        try {
+          const parsed = JSON.parse(savedAppointments);
+          setTimeout(() => setAppointments(parsed), 0);
+        } catch (e) {
+          console.error("Error parsing local appointments", e);
+        }
+      }
+
       // Load from localStorage for guests
       const saved = localStorage.getItem('guestSettings');
       if (saved) {
@@ -294,8 +342,8 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       setDefaultPrices(prev => ({ ...prev, ...settings.defaultPrices }));
     }
 
-    // Save to localStorage for guests
-    if (!user) {
+    // Save to localStorage for guests or local users
+    if (!user || ('isLocal' in user)) {
       localStorage.setItem('guestSettings', JSON.stringify({
         businessPhone: settings.businessPhone ?? businessPhone,
         laborPricePerM2: settings.laborPricePerM2 ?? laborPricePerM2,
@@ -315,12 +363,42 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginLocally = (name: string) => {
+    const localUser: LocalUser = {
+      uid: 'local_' + Math.random().toString(36).substr(2, 9),
+      displayName: name,
+      email: 'local@device.com',
+      isLocal: true
+    };
+    localStorage.setItem('localUser', JSON.stringify(localUser));
+    setUser(localUser);
+  };
+
+  const logout = async () => {
+    if (user && 'isLocal' in user) {
+      localStorage.removeItem('localUser');
+      setUser(null);
+    } else {
+      await auth.signOut();
+    }
+  };
+
   const setBusinessPhone = async (phone: string) => {
     await updateSettings({ businessPhone: phone });
   };
 
   const saveEstimate = async (estimateData: Omit<Estimate, 'id' | 'uid'>) => {
-    if (!user) return;
+    if (!user || ('isLocal' in user)) {
+      const newEstimate: Estimate = {
+        ...estimateData,
+        id: 'local_' + Date.now(),
+        uid: user?.uid || 'guest'
+      };
+      const updatedHistory = [newEstimate, ...history];
+      setHistory(updatedHistory);
+      localStorage.setItem('guestHistory', JSON.stringify(updatedHistory));
+      return;
+    }
     try {
       await addDoc(collection(db, 'estimates'), {
         ...estimateData,
@@ -333,6 +411,17 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const saveAppointment = async (appointmentData: Omit<Appointment, 'id' | 'uid'>) => {
+    if (!user || ('isLocal' in user)) {
+      const newAppointment: Appointment = {
+        ...appointmentData,
+        id: 'local_' + Date.now(),
+        uid: user?.uid || 'guest'
+      };
+      const updatedAppointments = [newAppointment, ...appointments];
+      setAppointments(updatedAppointments);
+      localStorage.setItem('guestAppointments', JSON.stringify(updatedAppointments));
+      return;
+    }
     const targetUid = user?.uid || professionalUid;
     if (!targetUid) {
       console.error("No target UID for appointment");
@@ -350,7 +439,14 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateAppointment = async (updatedApp: Appointment) => {
-    if (!user) return;
+    if (!user || ('isLocal' in user)) {
+      const updatedAppointments = appointments.map(app => 
+        app.id === updatedApp.id ? updatedApp : app
+      );
+      setAppointments(updatedAppointments);
+      localStorage.setItem('guestAppointments', JSON.stringify(updatedAppointments));
+      return;
+    }
     try {
       const { id, ...data } = updatedApp;
       await updateDoc(doc(db, 'appointments', id), {
@@ -363,7 +459,12 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteAppointment = async (id: string) => {
-    if (!user) return;
+    if (!user || ('isLocal' in user)) {
+      const updatedAppointments = appointments.filter(app => app.id !== id);
+      setAppointments(updatedAppointments);
+      localStorage.setItem('guestAppointments', JSON.stringify(updatedAppointments));
+      return;
+    }
     try {
       await deleteDoc(doc(db, 'appointments', id));
     } catch (error) {
@@ -452,6 +553,8 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       laborPricePerM2,
       defaultPrices,
       setBusinessPhone,
+      loginLocally,
+      logout,
       updateSettings,
       saveEstimate, 
       saveAppointment,

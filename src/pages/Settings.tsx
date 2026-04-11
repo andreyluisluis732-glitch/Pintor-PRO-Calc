@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Phone, User, CheckCircle2, Share2, Copy, LogIn, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Save, Phone, User, CheckCircle2, Share2, Copy, LogIn, HelpCircle, Download } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { businessPhone, defaultPrices, updateSettings, user } = useEstimate();
+  const { businessPhone, defaultPrices, updateSettings, user, logout } = useEstimate();
   const [phone, setPhone] = useState(businessPhone);
   const [prices, setPrices] = useState(defaultPrices);
   const [saving, setSaving] = useState(false);
@@ -266,12 +266,49 @@ export default function SettingsPage() {
             </button>
           </div>
 
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-outline-variant/10">
+            <h3 className="font-bold text-[#191c1e] mb-4 flex items-center gap-2">
+              <Download size={18} className="text-primary" />
+              Baixar App no Celular
+            </h3>
+            <p className="text-xs text-on-surface-variant mb-4 leading-relaxed">
+              Você pode instalar este aplicativo diretamente no seu celular para acessar mais rápido, como se fosse um app da Google Play Store.
+            </p>
+            
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">No Android (Chrome)</p>
+                <p className="text-xs text-slate-600">Clique nos <span className="font-bold">três pontinhos</span> no topo do navegador e selecione <span className="font-bold">"Instalar Aplicativo"</span>.</p>
+              </div>
+              
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">No iPhone (Safari)</p>
+                <p className="text-xs text-slate-600">Clique no ícone de <span className="font-bold">Compartilhar</span> (quadrado com seta) e selecione <span className="font-bold">"Adicionar à Tela de Início"</span>.</p>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
             <h3 className="text-blue-800 font-bold text-sm mb-2">Como funciona?</h3>
             <p className="text-blue-700 text-xs leading-relaxed">
               Ao configurar seu número, todos os orçamentos gerados pelos clientes serão enviados diretamente para o seu WhatsApp pessoal. Isso facilita o contato imediato e o fechamento de novos serviços.
             </p>
           </div>
+
+          {user && (
+            <div className="pt-4">
+              <button 
+                onClick={async () => {
+                  await logout();
+                  navigate('/login');
+                }}
+                className="w-full bg-red-50 text-red-600 py-4 rounded-xl font-bold flex items-center justify-center gap-3 border border-red-100 active:scale-95 duration-150 transition-all"
+              >
+                <LogIn size={20} className="rotate-180" />
+                Sair da Conta {('isLocal' in user) ? 'Local' : ''}
+              </button>
+            </div>
+          )}
 
           {!user && (
             <div className="pt-4">

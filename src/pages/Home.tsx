@@ -1,13 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, Settings, AlertCircle } from 'lucide-react';
+import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, Settings, AlertCircle, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
-import { auth } from '../lib/firebase';
 
 export default function Home() {
-  const { history, user } = useEstimate();
+  const { history, user, logout } = useEstimate();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -24,7 +23,7 @@ export default function Home() {
             </div>
             {user && (
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                Painel Profissional
+                {('isLocal' in user) ? 'Modo Local' : 'Painel Profissional'}
               </span>
             )}
           </div>
@@ -44,7 +43,7 @@ export default function Home() {
               <Settings size={18} />
             </Link>
             <button 
-              onClick={() => auth.signOut()}
+              onClick={logout}
               className="active:scale-90 transition-all ml-1"
               title="Sair"
             >
@@ -181,6 +180,19 @@ export default function Home() {
                 <div className="flex-1">
                   <h3 className="font-bold text-sm text-white">Central de Ajuda</h3>
                   <p className="text-[10px] text-white/50 font-medium">Dúvidas e Suporte Técnico</p>
+                </div>
+                <ArrowRight size={16} className="text-white/30 group-hover:text-white group-hover:translate-x-1 transition-all" />
+              </div>
+            </Link>
+
+            <Link to="/settings" className="block">
+              <div className="bg-blue-600 p-5 rounded-3xl shadow-lg shadow-blue-100 flex items-center gap-4 group">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
+                  <Download size={20} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-sm text-white">Baixar App no Celular</h3>
+                  <p className="text-[10px] text-white/70 font-medium">Instalar na tela de início</p>
                 </div>
                 <ArrowRight size={16} className="text-white/30 group-hover:text-white group-hover:translate-x-1 transition-all" />
               </div>
