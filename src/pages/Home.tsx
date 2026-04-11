@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, Settings } from 'lucide-react';
+import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, Settings, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
@@ -61,6 +61,22 @@ export default function Home() {
         <div className="absolute inset-0 bg-architectural-grid pointer-events-none opacity-50" />
         
         <div className="max-w-md w-full z-10 space-y-8 pt-6">
+          {!user && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start gap-3 shadow-sm"
+            >
+              <AlertCircle className="text-amber-600 w-5 h-5 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-amber-900 font-bold text-xs mb-1">Modo Convidado Ativo</h4>
+                <p className="text-amber-800 text-[10px] leading-relaxed">
+                  Você está usando o app sem login. Seus orçamentos serão salvos apenas neste dispositivo e podem ser perdidos se você limpar o navegador.
+                </p>
+              </div>
+            </motion.div>
+          )}
+
           {/* Hero Content - More Compact */}
           <div className="space-y-4 text-center">
             <motion.div 

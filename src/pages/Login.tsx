@@ -154,15 +154,23 @@ export default function LoginPage() {
                   <p className="text-amber-800 text-xs leading-relaxed mb-4">
                     Como dono do aplicativo, você precisa ativar o login no Console do Firebase uma única vez para que seus usuários possam entrar.
                   </p>
-                  <a 
-                    href={consoleUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full py-3 bg-amber-600 text-white text-xs font-bold rounded-xl hover:bg-amber-700 transition-colors"
-                  >
-                    Ativar no Console do Firebase
-                    <ExternalLink size={14} />
-                  </a>
+                  <div className="space-y-2">
+                    <a 
+                      href={consoleUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full py-3 bg-amber-600 text-white text-xs font-bold rounded-xl hover:bg-amber-700 transition-colors"
+                    >
+                      Ativar no Console do Firebase
+                      <ExternalLink size={14} />
+                    </a>
+                    <button 
+                      onClick={() => navigate('/')}
+                      className="w-full py-2 text-amber-700 text-[10px] font-black uppercase tracking-widest hover:text-amber-900 transition-colors"
+                    >
+                      Pular e entrar como convidado
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -263,15 +271,24 @@ export default function LoginPage() {
             </motion.form>
           </div>
 
-          <div className="mt-10 pt-8 border-t border-slate-50 text-center">
+          <div className="mt-10 pt-8 border-t border-slate-50 text-center space-y-4">
             <button
               onClick={() => setIsLogin(!isLogin)}
-              className="text-blue-600 font-bold hover:text-blue-700 transition-colors text-sm"
+              className="text-blue-600 font-bold hover:text-blue-700 transition-colors text-sm w-full"
             >
               {isLogin 
                 ? 'Não tem uma conta? Cadastre-se agora' 
                 : 'Já tem uma conta? Faça o login'}
             </button>
+
+            <div className="pt-2">
+              <button
+                onClick={() => navigate('/')}
+                className="text-slate-400 font-bold hover:text-slate-600 transition-colors text-[10px] uppercase tracking-widest"
+              >
+                Entrar como Convidado (Modo Offline)
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>
