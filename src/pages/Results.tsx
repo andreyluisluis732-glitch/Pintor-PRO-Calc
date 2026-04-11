@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
 import { PRODUCT_CATALOG } from '../constants/catalog';
@@ -159,8 +159,7 @@ export default function ResultsPage() {
       tableData.push(['Quantidade', `${currentEstimate.packageCount} ${currentEstimate.packageSize === 'bucket' ? 'Balde(s)' : currentEstimate.packageSize === 'can' ? 'Lata(s)' : 'Litro(s)'}`]);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: 60,
       head: [['Item', 'Detalhes']],
       body: tableData,
@@ -184,8 +183,7 @@ export default function ResultsPage() {
     costData.push(['Mão de Obra', formatCurrency(currentEstimate.laborCost || 0)]);
     costData.push(['TOTAL', formatCurrency(currentEstimate.totalCost || 0)]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: finalY + 5,
       body: costData,
       theme: 'plain',
@@ -213,21 +211,26 @@ export default function ResultsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] text-on-surface pb-24">
+    <div className="min-h-screen bg-[#f0f2f5] text-on-surface pb-32">
       {/* Top Navigation Anchor */}
-      <header className="w-full top-0 sticky z-40 bg-[#f0f2f5] shadow-none">
+      <header className="w-full top-0 sticky z-40 bg-[#f0f2f5]/80 backdrop-blur-md border-b border-slate-200">
         <div className="flex items-center justify-between px-6 py-4 w-full max-w-md mx-auto">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate(-1)}
-              className="text-[#002D5E] active:scale-95 duration-150"
+              className="text-[#002D5E] active:scale-95 duration-150 p-2 rounded-xl hover:bg-slate-100 transition-all"
             >
-              <ArrowLeft size={24} />
+              <ArrowLeft size={20} />
             </button>
-            <h1 className="text-[#002D5E] font-black tracking-tighter text-xl italic">Pintor PRO Calc</h1>
+            <h1 className="text-blue-600 font-black tracking-tighter text-lg italic uppercase">Pintor PRO Calc</h1>
           </div>
-          <div className="font-sans font-semibold tracking-wider text-sm uppercase text-[#002D5E]">
-            Resumo
+          <div className="flex items-center gap-2">
+            <Link to="/help" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+              <HelpCircle size={18} />
+            </Link>
+            <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+              <Settings size={18} />
+            </Link>
           </div>
         </div>
       </header>

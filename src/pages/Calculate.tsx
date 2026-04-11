@@ -136,22 +136,27 @@ function CalculateContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] text-on-surface pb-24">
+    <div className="min-h-screen bg-[#f0f2f5] text-on-surface pb-32">
       {/* TopAppBar */}
-      <header className="w-full top-0 sticky bg-[#f0f2f5] z-50">
+      <header className="w-full top-0 sticky bg-[#f0f2f5]/80 backdrop-blur-md z-50 border-b border-slate-200">
         <div className="flex items-center justify-between px-6 py-4 w-full max-w-md mx-auto">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate(-1)}
-              className="text-[#002D5E] active:scale-95 duration-150 p-2 rounded-full hover:bg-[#e7e8eb]"
+              className="text-[#002D5E] active:scale-95 duration-150 p-2 rounded-xl hover:bg-slate-100 transition-all"
             >
-              <ArrowLeft size={24} />
+              <ArrowLeft size={20} />
             </button>
-            <h1 className="font-sans font-semibold tracking-wider text-sm uppercase text-[#002D5E]">Pintor PRO Calc</h1>
+            <h1 className="font-black tracking-tighter text-lg italic text-blue-600 uppercase">Pintor PRO Calc</h1>
           </div>
-          <Link to="/help" className="p-2 text-[#002D5E] hover:bg-[#e7e8eb] rounded-full transition-colors">
-            <HelpCircle size={24} />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link to="/help" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+              <HelpCircle size={18} />
+            </Link>
+            <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+              <Settings size={18} />
+            </Link>
+          </div>
         </div>
       </header>
 

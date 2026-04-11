@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Phone, User, CheckCircle2, Share2, Copy, LogIn } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Save, Phone, User, CheckCircle2, Share2, Copy, LogIn, HelpCircle, Settings } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
 
@@ -83,17 +83,22 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface text-on-surface pb-24">
-      <header className="w-full top-0 sticky z-40 bg-[#f9f9fd] shadow-none">
+    <div className="min-h-screen bg-surface text-on-surface pb-32">
+      <header className="w-full top-0 sticky z-40 bg-[#f0f2f5]/80 backdrop-blur-md border-b border-slate-200">
         <div className="flex items-center justify-between px-6 py-4 w-full max-w-md mx-auto">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate(-1)}
-              className="text-[#002D5E] active:scale-95 duration-150"
+              className="text-[#002D5E] active:scale-95 duration-150 p-2 rounded-xl hover:bg-slate-100 transition-all"
             >
-              <ArrowLeft size={24} />
+              <ArrowLeft size={20} />
             </button>
-            <h1 className="text-[#002D5E] font-black tracking-tighter text-xl italic">Configurações</h1>
+            <h1 className="text-lg font-black text-blue-600 italic uppercase tracking-tighter">Ajustes</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link to="/help" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+              <HelpCircle size={18} />
+            </Link>
           </div>
         </div>
       </header>

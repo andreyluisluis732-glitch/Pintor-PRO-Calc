@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar as CalendarIcon, Clock, CheckCircle2, Trash2, Plus, Edit2, Phone, Mail, MapPin, FileText, X, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Clock, CheckCircle2, Trash2, Plus, Edit2, Phone, Mail, MapPin, FileText, X, HelpCircle, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate, Appointment } from '../context/EstimateContext';
@@ -156,30 +156,33 @@ export default function SchedulePage() {
   const todayAppointments = appointments.filter(app => app.date === today);
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] text-[#191c1e] pb-32">
-      <header className="w-full top-0 sticky bg-[#f0f2f5] z-40">
+    <div className="min-h-screen bg-[#f0f2f5] text-[#191c1e] pb-40">
+      <header className="w-full top-0 sticky bg-[#f0f2f5]/80 backdrop-blur-md z-40 border-b border-slate-200">
         <div className="flex items-center justify-between px-6 py-4 w-full max-w-md mx-auto">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate(-1)}
-              className="active:scale-95 duration-150 p-2 hover:bg-[#e7e8eb] transition-colors rounded-full"
+              className="active:scale-95 duration-150 p-2 hover:bg-slate-100 transition-all rounded-xl"
             >
-              <ArrowLeft size={24} className="text-[#002D5E]" />
+              <ArrowLeft size={20} className="text-[#002D5E]" />
             </button>
-            <h1 className="text-xl font-bold text-[#002D5E]">
-              {user ? 'Agenda do Consultor' : 'Solicitar Consulta'}
+            <h1 className="text-lg font-black text-blue-600 italic uppercase tracking-tighter">
+              {user ? 'Agenda' : 'Consulta'}
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/help" className="p-2 text-[#002D5E] hover:bg-[#e7e8eb] rounded-full transition-colors">
-              <HelpCircle size={24} />
+            <Link to="/help" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+              <HelpCircle size={18} />
+            </Link>
+            <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+              <Settings size={18} />
             </Link>
             {user && (
               <button 
                 onClick={() => setIsAdding(true)}
-                className="p-2 bg-primary text-white rounded-full shadow-md active:scale-90 transition-transform"
+                className="p-2 bg-blue-600 text-white rounded-xl shadow-lg active:scale-90 transition-all ml-1"
               >
-                <Plus size={20} />
+                <Plus size={18} />
               </button>
             )}
           </div>

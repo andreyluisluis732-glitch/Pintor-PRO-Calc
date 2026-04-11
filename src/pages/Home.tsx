@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight } from 'lucide-react';
+import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
@@ -14,34 +14,41 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col pb-24 bg-[#f0f2f5]">
+    <div className="min-h-screen flex flex-col pb-32 bg-[#f0f2f5]">
       {/* Top Navigation Bar */}
-      <header className="w-full top-0 sticky z-40 bg-[#f0f2f5] shadow-none">
+      <header className="w-full top-0 sticky z-40 bg-[#f0f2f5]/80 backdrop-blur-md border-b border-slate-200">
         <div className="flex items-center justify-between px-6 py-4 w-full max-w-md mx-auto">
           <div className="flex flex-col">
-            <div className="text-[#002D5E] font-black tracking-tighter text-xl italic uppercase">
+            <div className="text-blue-600 font-black tracking-tighter text-xl italic uppercase">
               Pintor PRO Calc
             </div>
             {user && (
-              <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-                Olá, {user.displayName?.split(' ')[0] || 'Profissional'}
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                Painel Profissional
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Link 
-              to="/supabase-test"
-              className="p-2 rounded-full bg-surface-container-highest text-on-surface-variant hover:bg-surface-container-high transition-all"
-              title="Testar Supabase"
+              to="/help"
+              className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all active:scale-90"
+              title="Ajuda"
             >
-              <Database size={18} />
+              <HelpCircle size={18} />
+            </Link>
+            <Link 
+              to="/settings"
+              className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all active:scale-90"
+              title="Ajustes"
+            >
+              <Settings size={18} />
             </Link>
             <button 
               onClick={() => auth.signOut()}
-              className="text-[#43474f] hover:bg-[#e7e8eb] transition-colors active:scale-95 duration-150 p-2 rounded-full flex items-center gap-2"
+              className="active:scale-90 transition-all ml-1"
               title="Sair"
             >
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+              <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-blue-200">
                 {user?.displayName?.[0] || user?.email?.[0] || 'P'}
               </div>
             </button>
@@ -49,157 +56,120 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center px-6 relative overflow-hidden">
+      <main className="flex-1 flex flex-col items-center px-5 relative overflow-hidden">
         {/* Background Decorative Layer */}
-        <div className="absolute inset-0 bg-architectural-grid pointer-events-none" />
+        <div className="absolute inset-0 bg-architectural-grid pointer-events-none opacity-50" />
         
-        <div className="max-w-md w-full z-10 space-y-12 pt-8">
-          {/* Hero Content */}
-          <div className="space-y-6 text-center">
+        <div className="max-w-md w-full z-10 space-y-8 pt-6">
+          {/* Hero Content - More Compact */}
+          <div className="space-y-4 text-center">
             <motion.div 
-              initial={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed-variant rounded-full text-[10px] font-bold tracking-widest uppercase mb-4"
+              className="inline-flex items-center px-3 py-1 bg-blue-600/10 text-blue-700 rounded-full text-[9px] font-black tracking-[0.2em] uppercase mb-2"
             >
-              <Ruler size={14} className="mr-1" />
+              <Ruler size={12} className="mr-1.5" />
               Painel de Precisão
             </motion.div>
             
             <motion.h1 
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-              className="text-4xl md:text-5xl font-sans font-extrabold tracking-tighter text-[#191c1e] leading-[1.1]"
+              className="text-3xl font-black tracking-tighter text-slate-900 leading-tight"
             >
-              Calcule seu orçamento de pintura em <span className="text-[#e17b00]">segundos</span>
+              Orçamentos de pintura em <span className="text-blue-600">segundos</span>
             </motion.h1>
-            
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="text-on-surface-variant text-base md:text-lg leading-relaxed max-w-[85%] mx-auto"
-            >
-              A ferramenta definitiva para pintores profissionais que buscam exatidão em cada galão e metro quadrado.
-            </motion.p>
           </div>
 
-          {/* Visual Graphic Card */}
-          <motion.div 
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="relative group"
-          >
-            <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-xl opacity-10 group-hover:opacity-20 transition duration-1000" />
-            <div className="relative bg-white border border-outline-variant/10 rounded-xl overflow-hidden shadow-sm">
-              <div className="relative w-full aspect-square">
-                <img 
-                  src="https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=800&auto=format&fit=crop" 
-                  alt="Pintor Profissional em Trabalho"
-                  className="w-full h-full object-cover transition-all duration-700"
-                />
-              </div>
-              <div className="p-4 flex justify-between items-center bg-surface-low">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-white">
-                    <Ruler size={20} />
+          {/* Main Action Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            <Link to="/calculate" className="col-span-2 group">
+              <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 hover:border-blue-500/50 transition-all active:scale-[0.98] relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <Calculator size={80} />
+                </div>
+                <div className="flex items-center gap-4 relative z-10">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                    <Calculator size={24} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Precisão de Cálculo</p>
-                    <p className="text-sm font-semibold text-[#191c1e]">Margem de erro &lt; 1%</p>
+                    <h3 className="font-black text-slate-900 leading-none mb-1">Novo Orçamento</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cálculo detalhado</p>
                   </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-xs font-bold text-blue-600">Começar agora</span>
+                  <ArrowRight size={16} className="text-blue-600 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
-            </div>
-          </motion.div>
+            </Link>
 
-          {/* Action Cluster */}
-          <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-1 gap-4">
-              <Link to="/calculate" className="group">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 hover:border-primary/50 transition-all active:scale-95">
-                  <div className="flex items-center gap-4 mb-3">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                      <Calculator size={24} />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="font-bold text-lg text-[#191c1e]">Orçamento Completo</h3>
-                      <p className="text-xs text-on-surface-variant">Cálculo detalhado de materiais e mão de obra</p>
-                    </div>
-                  </div>
-                  <div className="w-full h-12 bg-primary text-white font-bold rounded-xl flex items-center justify-center gap-2">
-                    Começar Agora
-                  </div>
+            <Link to="/schedule" className="group">
+              <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 hover:border-blue-500/50 transition-all active:scale-[0.98] h-full flex flex-col">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 mb-3">
+                  <MessageSquare size={20} />
                 </div>
-              </Link>
+                <h3 className="font-bold text-sm text-slate-900 leading-tight mb-1">Agenda</h3>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">Visitas técnicas</p>
+              </div>
+            </Link>
 
-              <Link to="/schedule" className="group">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 hover:border-secondary/50 transition-all active:scale-95">
-                  <div className="flex items-center gap-4 mb-3">
-                    <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
-                      <MessageSquare size={24} />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="font-bold text-lg text-[#191c1e]">Consultoria Técnica</h3>
-                      <p className="text-xs text-on-surface-variant">Agende uma visita para medição e avaliação</p>
-                    </div>
-                  </div>
-                  <div className="w-full h-12 bg-secondary text-white font-bold rounded-xl flex items-center justify-center gap-2">
-                    Agendar Consulta
-                  </div>
+            <Link to="/catalog" className="group">
+              <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 hover:border-blue-500/50 transition-all active:scale-[0.98] h-full flex flex-col">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 mb-3">
+                  <Database size={20} />
                 </div>
-              </Link>
-            </div>
-
-            {user && (
-              <Link to="/history">
-                <button className="w-full h-14 bg-surface-container-high text-on-secondary-container font-semibold rounded-xl hover:bg-surface-container-highest transition-colors active:scale-95 duration-150 flex items-center justify-center gap-2">
-                  <History size={20} />
-                  Ver Histórico de Orçamentos
-                </button>
-              </Link>
-            )}
-
-            <Link to="/help">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-outline-variant/10 hover:border-primary/50 transition-all active:scale-95 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                  <HelpCircle size={24} />
-                </div>
-                <div className="text-left flex-1">
-                  <h3 className="font-bold text-lg text-[#191c1e]">Precisa de Ajuda?</h3>
-                  <p className="text-xs text-on-surface-variant">Dúvidas sobre como fazer seu orçamento ou consulta?</p>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <ArrowRight size={16} />
-                </div>
+                <h3 className="font-bold text-sm text-slate-900 leading-tight mb-1">Catálogo</h3>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">Produtos e Cores</p>
               </div>
             </Link>
           </div>
 
-          {/* Recent Projects Preview - Only for Professional */}
-          {user && (
-            <div className="bg-surface-low rounded-xl p-4">
-              <h3 className="font-sans font-semibold tracking-wider text-xs uppercase text-on-surface-variant mb-4">Últimos Orçamentos</h3>
-              <div className="space-y-3">
-                {history.length === 0 ? (
-                  <div className="text-center py-4 text-on-surface-variant text-xs italic">
-                    Nenhum orçamento recente
-                  </div>
-                ) : (
-                  history.slice(0, 3).map((est) => (
-                    <div key={est.id} className="bg-white p-3 rounded-md flex justify-between items-center shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <History size={18} className="text-secondary" />
-                        <span className="text-sm font-medium">{est.title}</span>
-                      </div>
-                      <span className="text-sm font-bold text-primary">{formatCurrency(est.totalCost || 0)}</span>
+          {/* Secondary Actions */}
+          <div className="space-y-4">
+            {user && (
+              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-50 flex justify-between items-center">
+                  <h3 className="font-black text-[10px] text-slate-400 uppercase tracking-[0.2em]">Últimos Orçamentos</h3>
+                  <Link to="/history" className="text-[10px] font-black text-blue-600 uppercase tracking-wider">Ver tudo</Link>
+                </div>
+                <div className="p-2">
+                  {history.length === 0 ? (
+                    <div className="text-center py-6 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                      Nenhum registro
                     </div>
-                  ))
-                )}
+                  ) : (
+                    <div className="space-y-1">
+                      {history.slice(0, 2).map((est) => (
+                        <Link key={est.id} to="/history" className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-2xl transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
+                              <History size={14} />
+                            </div>
+                            <span className="text-xs font-bold text-slate-700">{est.title}</span>
+                          </div>
+                          <span className="text-xs font-black text-blue-600">{formatCurrency(est.totalCost || 0)}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            <Link to="/help" className="block">
+              <div className="bg-slate-900 p-5 rounded-3xl shadow-lg shadow-slate-200 flex items-center gap-4 group">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
+                  <HelpCircle size={20} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-sm text-white">Central de Ajuda</h3>
+                  <p className="text-[10px] text-white/50 font-medium">Dúvidas e Suporte Técnico</p>
+                </div>
+                <ArrowRight size={16} className="text-white/30 group-hover:text-white group-hover:translate-x-1 transition-all" />
+              </div>
+            </Link>
+          </div>
         </div>
       </main>
 
