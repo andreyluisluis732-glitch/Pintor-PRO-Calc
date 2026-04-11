@@ -1,4 +1,9 @@
 {
-  "extends": "next",
-  "ignorePatterns": ["dist/"]
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended", "plugin:react-hooks/recommended"],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "ignorePatterns": ["dist/"],
+  "rules": {
+    "react-hooks/exhaustive-deps": "warn"
+  }
 }
