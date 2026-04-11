@@ -241,7 +241,24 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
         setAppointments([]);
       }, 0);
       
-      // For guest users, try to find the first settings document (the professional's)
+      // Load from localStorage for guests
+      const saved = localStorage.getItem('guestSettings');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          setTimeout(() => {
+            setBusinessPhoneState(data.businessPhone || '');
+            setLaborPricePerM2(data.laborPricePerM2 || 20);
+            if (data.defaultPrices) {
+              setDefaultPrices(prev => ({ ...prev, ...data.defaultPrices }));
+            }
+          }, 0);
+        } catch (e) {
+          console.error("Error parsing guest settings", e);
+        }
+      }
+
+      // For guest users, try to find the first settings document (the professional's) as fallback
       const settingsQuery = query(collection(db, 'settings'), limit(1));
       unsubSettings = onSnapshot(settingsQuery, (snapshot) => {
         if (!snapshot.empty) {
@@ -270,7 +287,23 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     laborPricePerM2?: number;
     defaultPrices?: Record<PricingType, number>;
   }) => {
-    if (!user) return;
+    // Update local state first
+    if (settings.businessPhone !== undefined) setBusinessPhoneState(settings.businessPhone);
+    if (settings.laborPricePerM2 !== undefined) setLaborPricePerM2(settings.laborPricePerM2);
+    if (settings.defaultPrices !== undefined) {
+      setDefaultPrices(prev => ({ ...prev, ...settings.defaultPrices }));
+    }
+
+    // Save to localStorage for guests
+    if (!user) {
+      localStorage.setItem('guestSettings', JSON.stringify({
+        businessPhone: settings.businessPhone ?? businessPhone,
+        laborPricePerM2: settings.laborPricePerM2 ?? laborPricePerM2,
+        defaultPrices: settings.defaultPrices ?? defaultPrices
+      }));
+      return;
+    }
+
     try {
       await setDoc(doc(db, 'settings', user.uid), {
         ...settings,
