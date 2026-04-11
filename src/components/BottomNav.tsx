@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Play, Calculator, ClipboardList, BookOpen, Settings, HelpCircle } from 'lucide-react';
-import { useEstimate } from '../context/EstimateContext';
 
 const navItems = [
   { name: 'Início', icon: Play, href: '/' },
@@ -15,9 +14,8 @@ const navItems = [
 export default function BottomNav() {
   const location = useLocation();
   const pathname = location.pathname;
-  const { user } = useEstimate();
 
-  const visibleItems = navItems.filter(item => !item.professionalOnly || user);
+  const visibleItems = navItems;
 
   return (
     <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 pb-safe bg-[#3e5f92]/90 backdrop-blur-md z-50 rounded-t-xl border-t border-white/10 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">

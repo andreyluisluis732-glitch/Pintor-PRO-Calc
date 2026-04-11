@@ -2,6 +2,8 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
 import { PRODUCT_CATALOG } from '../constants/catalog';
@@ -115,6 +117,90 @@ export default function ResultsPage() {
 
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/${phone}?text=${encodedMessage}`, '_blank');
+  };
+  
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Header
+    doc.setFillColor(0, 45, 94); // #002D5E
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PINTOR PRO CALC', 20, 25);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('ORÇAMENTO DE PINTURA PROFISSIONAL', 20, 32);
+    
+    // Body
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RESUMO DO PROJETO', 20, 55);
+    
+    const tableData = [
+      ['Cliente', currentEstimate.clientName || 'Não informado'],
+      ['Contato', currentEstimate.clientPhone || 'Não informado'],
+      ['Tipo de Imóvel', currentEstimate.propertyType || 'Não informado'],
+      ['Localização', `${currentEstimate.neighborhood || ''}${currentEstimate.neighborhood && currentEstimate.city ? ', ' : ''}${currentEstimate.city || ''}` || 'Não informado'],
+      ['Área Total', `${currentEstimate.area} m²`],
+      ['Número de Demãos', `${currentEstimate.coats} demãos`],
+      ['Forma de Cobrança', currentEstimate.pricingType || 'Não informado'],
+      ['Tinta Inclusa', currentEstimate.includePaint ? 'Sim' : 'Não'],
+    ];
+
+    if (currentEstimate.productId && currentEstimate.includePaint) {
+      tableData.push(['Produto', product.name]);
+      tableData.push(['Cor', currentEstimate.color || 'Padrão']);
+      tableData.push(['Quantidade', `${currentEstimate.packageCount} ${currentEstimate.packageSize === 'bucket' ? 'Balde(s)' : currentEstimate.packageSize === 'can' ? 'Lata(s)' : 'Litro(s)'}`]);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (doc as any).autoTable({
+      startY: 60,
+      head: [['Item', 'Detalhes']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [0, 45, 94] },
+      margin: { left: 20, right: 20 }
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const finalY = (doc as any).lastAutoTable.finalY + 20;
+
+    // Costs
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INVESTIMENTO ESTIMADO', 20, finalY);
+
+    const costData = [];
+    if (currentEstimate.includePaint) {
+      costData.push(['Material', formatCurrency(currentEstimate.materialCost || 0)]);
+    }
+    costData.push(['Mão de Obra', formatCurrency(currentEstimate.laborCost || 0)]);
+    costData.push(['TOTAL', formatCurrency(currentEstimate.totalCost || 0)]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (doc as any).autoTable({
+      startY: finalY + 5,
+      body: costData,
+      theme: 'plain',
+      styles: { fontSize: 12, fontStyle: 'bold' },
+      columnStyles: { 1: { halign: 'right' } },
+      margin: { left: 20, right: 20 }
+    });
+
+    // Footer
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Gerado via Pintor PRO Calc - Precisão Arquitetônica para Pintores', pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+    doc.save(`Orcamento_${currentEstimate.clientName || 'Pintura'}.pdf`);
   };
 
   const formatCurrency = (value: number) => {
@@ -374,7 +460,10 @@ export default function ResultsPage() {
             <CalendarIcon size={20} />
             Agendar Consulta Online
           </button>
-          <button className="w-full bg-surface-container-high text-on-secondary-container py-4 rounded-xl font-bold flex items-center justify-center gap-3 active:scale-95 duration-150 transition-transform">
+          <button 
+            onClick={handleExportPDF}
+            className="w-full bg-surface-container-high text-on-secondary-container py-4 rounded-xl font-bold flex items-center justify-center gap-3 active:scale-95 duration-150 transition-transform"
+          >
             <FileText size={20} />
             Exportar PDF do Orçamento
           </button>

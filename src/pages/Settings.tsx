@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Phone, User, CheckCircle2, Share2, Copy } from 'lucide-react';
+import { ArrowLeft, Save, Phone, User, CheckCircle2, Share2, Copy, LogIn } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
 
@@ -42,6 +42,45 @@ export default function SettingsPage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
   };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-surface text-on-surface pb-24">
+        <header className="w-full top-0 sticky z-40 bg-[#f9f9fd] shadow-none">
+          <div className="flex items-center justify-between px-6 py-4 w-full max-w-md mx-auto">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => navigate(-1)}
+                className="text-[#002D5E] active:scale-95 duration-150"
+              >
+                <ArrowLeft size={24} />
+              </button>
+              <h1 className="text-[#002D5E] font-black tracking-tighter text-xl italic">Configurações</h1>
+            </div>
+          </div>
+        </header>
+
+        <main className="px-6 py-12 flex flex-col items-center justify-center text-center space-y-6 max-w-md mx-auto">
+          <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
+            <Settings size={40} />
+          </div>
+          <h2 className="text-2xl font-bold text-[#191c1e]">Acesso Restrito</h2>
+          <p className="text-on-surface-variant leading-relaxed">
+            As configurações de precificação e contato são exclusivas para profissionais cadastrados.
+          </p>
+          <button 
+            onClick={() => navigate('/login')}
+            className="w-full bg-primary text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg active:scale-95 duration-150 transition-all"
+          >
+            <LogIn size={20} />
+            Entrar como Profissional
+          </button>
+        </main>
+
+        <BottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-surface text-on-surface pb-24">
