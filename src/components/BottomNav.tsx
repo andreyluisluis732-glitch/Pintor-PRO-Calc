@@ -13,10 +13,16 @@ const navItems = [
 export default function BottomNav() {
   const location = useLocation();
   const pathname = location.pathname;
+  const search = location.search;
+  const isClientMode = new URLSearchParams(search).get('mode') === 'client';
+
+  const filteredNavItems = isClientMode 
+    ? navItems.filter(item => !['/history', '/settings'].includes(item.href))
+    : navItems;
 
   return (
     <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[92%] max-w-md flex justify-between items-center px-1.5 py-1.5 bg-slate-900/95 backdrop-blur-xl z-50 rounded-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
-      {navItems.map((item) => {
+      {filteredNavItems.map((item) => {
         const isActive = pathname === item.href;
         const shortName = item.name === 'Início' ? 'Início' : 
                          item.name === 'Calcular' ? 'Calc' : 
@@ -26,7 +32,7 @@ export default function BottomNav() {
         return (
           <Link
             key={item.name}
-            to={item.href}
+            to={`${item.href}${isClientMode ? '?mode=client' : ''}`}
             className={`flex flex-col items-center justify-center transition-all active:scale-90 duration-200 flex-1 min-w-0 py-2.5 rounded-xl ${
               isActive 
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/40' 

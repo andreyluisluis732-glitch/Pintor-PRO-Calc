@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Calendar as CalendarIcon, Clock, CheckCircle2, Trash2, Plus, Edit2, Phone, Mail, MapPin, FileText, X, HelpCircle, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
@@ -7,6 +7,10 @@ import { useEstimate, Appointment } from '../context/EstimateContext';
 
 export default function SchedulePage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const search = location.search;
+  const isClientMode = new URLSearchParams(search).get('mode') === 'client';
+  const clientParam = isClientMode ? '?mode=client' : '';
   const { user, appointments, saveAppointment, updateAppointment, deleteAppointment, currentEstimate, businessPhone } = useEstimate();
   const [isAdding, setIsAdding] = useState(!user);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -171,12 +175,14 @@ export default function SchedulePage() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/help" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+            <Link to={`/help${clientParam}`} className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
               <HelpCircle size={18} />
             </Link>
-            <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
-              <Settings size={18} />
-            </Link>
+            {!isClientMode && (
+              <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+                <Settings size={18} />
+              </Link>
+            )}
             {user && (
               <button 
                 onClick={() => setIsAdding(true)}

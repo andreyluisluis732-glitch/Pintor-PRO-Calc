@@ -18,6 +18,8 @@ function CalculateContent() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { calculateEstimate, laborPricePerM2, defaultPrices } = useEstimate();
+  const isClientMode = searchParams.get('mode') === 'client';
+  const clientParam = isClientMode ? '?mode=client' : '';
   
   const initialProductId = searchParams.get('productId') || PRODUCT_CATALOG[2].id;
   const initialProduct = PRODUCT_CATALOG.find(p => p.id === initialProductId) || PRODUCT_CATALOG[2];
@@ -132,7 +134,7 @@ function CalculateContent() {
       notes
     });
     
-    navigate('/results');
+    navigate('/results' + clientParam);
   };
 
   return (
@@ -150,12 +152,14 @@ function CalculateContent() {
             <h1 className="font-black tracking-tighter text-lg italic text-blue-600 uppercase">Pintor PRO Calc</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/help" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+            <Link to={`/help${clientParam}`} className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
               <HelpCircle size={18} />
             </Link>
-            <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
-              <Settings size={18} />
-            </Link>
+            {!isClientMode && (
+              <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+                <Settings size={18} />
+              </Link>
+            )}
           </div>
         </div>
       </header>
@@ -720,7 +724,7 @@ function CalculateContent() {
                     mediaUrls: [],
                     notes
                   });
-                  navigate('/results');
+                  navigate('/results' + clientParam);
                 }}
                 className="w-full py-2 text-primary font-bold text-xs uppercase tracking-widest underline text-center"
               >

@@ -37,7 +37,7 @@ export default function SettingsPage() {
   };
 
   const handleCopyLink = () => {
-    const url = window.location.origin;
+    const url = `${window.location.origin}?mode=client`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);

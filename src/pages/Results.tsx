@@ -1,6 +1,6 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon, HelpCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -10,6 +10,10 @@ import { PRODUCT_CATALOG } from '../constants/catalog';
 
 export default function ResultsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const search = location.search;
+  const isClientMode = new URLSearchParams(search).get('mode') === 'client';
+  const clientParam = isClientMode ? '?mode=client' : '';
   const { currentEstimate, saveEstimate, user, businessPhone } = useEstimate();
 
   const product = PRODUCT_CATALOG.find(p => p.id === currentEstimate.productId) || PRODUCT_CATALOG[0];
@@ -18,7 +22,7 @@ export default function ResultsPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <h2 className="text-xl font-bold mb-4">Nenhum cálculo encontrado</h2>
-        <Link to="/calculate" className="text-primary font-bold underline">Voltar para o cálculo</Link>
+        <Link to={`/calculate${clientParam}`} className="text-primary font-bold underline">Voltar para o cálculo</Link>
       </div>
     );
   }
@@ -54,7 +58,7 @@ export default function ResultsPage() {
         ? `${currentEstimate.propertyType || 'Obra'}: ${currentEstimate.clientName}` 
         : `${currentEstimate.propertyType || 'Projeto'} ${currentEstimate.area}m²`,
     });
-    navigate('/history');
+    navigate('/history' + clientParam);
   };
 
   const handleSendToPainter = () => {
@@ -225,12 +229,14 @@ export default function ResultsPage() {
             <h1 className="text-blue-600 font-black tracking-tighter text-lg italic uppercase">Pintor PRO Calc</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/help" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+            <Link to={`/help${clientParam}`} className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
               <HelpCircle size={18} />
             </Link>
-            <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
-              <Settings size={18} />
-            </Link>
+            {!isClientMode && (
+              <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+                <Settings size={18} />
+              </Link>
+            )}
           </div>
         </div>
       </header>
@@ -457,7 +463,7 @@ export default function ResultsPage() {
           </button>
           
           <button 
-            onClick={() => navigate('/schedule')}
+            onClick={() => navigate('/schedule' + clientParam)}
             className="w-full bg-secondary text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-md active:scale-95 duration-150 transition-transform"
           >
             <CalendarIcon size={20} />

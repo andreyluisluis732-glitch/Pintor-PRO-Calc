@@ -1,20 +1,40 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Pintor PRO Calc 🎨
 
-# Run and deploy your AI Studio app
+Uma calculadora profissional e completa para pintores gerenciarem seus orçamentos, agendamentos e catálogo de produtos com precisão e facilidade.
 
-This contains everything you need to run your app locally.
+## 🚀 Funcionalidades
 
-View your app in AI Studio: https://ai.studio/apps/0361f21d-7ed9-42fa-b897-bd5d7f8ff062
+- **Calculadora de Orçamentos:** Calcule área, quantidade de tinta necessária e custos de mão de obra em segundos.
+- **Catálogo de Produtos:** Acesso rápido a rendimentos e preços de tintas populares.
+- **Gestão de Agendamentos:** Organize suas visitas técnicas e execuções de serviço.
+- **Histórico de Orçamentos:** Mantenha um registro de todos os seus cálculos passados.
+- **PWA (Instalável):** Instale o app diretamente no seu celular (Android ou iOS) sem precisar da Play Store.
+- **Login Flexível:**
+  - **Google/E-mail:** Sincronização na nuvem para acessar de qualquer lugar.
+  - **Modo Local:** Use o app instantaneamente sem precisar criar conta, salvando tudo no seu aparelho.
+- **Integração com WhatsApp:** Envie orçamentos detalhados diretamente para o cliente via WhatsApp.
 
-## Run Locally
+## 📱 Como Instalar
 
-**Prerequisites:**  Node.js
+Este é um **Progressive Web App (PWA)**. Para instalar:
 
+1. Acesse o link do app pelo seu celular.
+2. **No Android (Chrome):** Clique nos três pontinhos e selecione "Instalar Aplicativo".
+3. **No iPhone (Safari):** Clique no ícone de compartilhar e selecione "Adicionar à Tela de Início".
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🛠️ Tecnologias Utilizadas
+
+- **React + TypeScript**
+- **Vite** (Build tool)
+- **Tailwind CSS** (Estilização)
+- **Firebase** (Autenticação e Banco de Dados)
+- **Framer Motion** (Animações)
+- **Lucide React** (Ícones)
+- **Vite PWA Plugin**
+
+## ⚙️ Configuração
+
+Para usar a sincronização em nuvem, você deve configurar seu próprio projeto no Firebase e atualizar o arquivo `firebase-applet-config.json`.
+
+---
+Desenvolvido para profissionais que buscam excelência e agilidade.

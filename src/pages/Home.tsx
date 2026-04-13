@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, Settings, AlertCircle, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
@@ -7,10 +7,15 @@ import { useEstimate } from '../context/EstimateContext';
 
 export default function Home() {
   const { history, user, logout } = useEstimate();
+  const location = useLocation();
+  const search = location.search;
+  const isClientMode = new URLSearchParams(search).get('mode') === 'client';
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
+
+  const clientParam = isClientMode ? '?mode=client' : '';
 
   return (
     <div className="min-h-screen flex flex-col pb-32 bg-[#f0f2f5]">
@@ -26,31 +31,40 @@ export default function Home() {
                 {('isLocal' in user) ? 'Modo Local' : 'Painel Profissional'}
               </span>
             )}
+            {isClientMode && !user && (
+              <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.2em]">
+                Portal do Cliente
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <Link 
-              to="/help"
+              to={`/help${clientParam}`}
               className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all active:scale-90"
               title="Ajuda"
             >
               <HelpCircle size={18} />
             </Link>
-            <Link 
-              to="/settings"
-              className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all active:scale-90"
-              title="Ajustes"
-            >
-              <Settings size={18} />
-            </Link>
-            <button 
-              onClick={logout}
-              className="active:scale-90 transition-all ml-1"
-              title="Sair"
-            >
-              <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-blue-200">
-                {user?.displayName?.[0] || user?.email?.[0] || 'P'}
-              </div>
-            </button>
+            {!isClientMode && (
+              <>
+                <Link 
+                  to="/settings"
+                  className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all active:scale-90"
+                  title="Ajustes"
+                >
+                  <Settings size={18} />
+                </Link>
+                <button 
+                  onClick={logout}
+                  className="active:scale-90 transition-all ml-1"
+                  title="Sair"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-blue-200">
+                    {user?.displayName?.[0] || user?.email?.[0] || 'P'}
+                  </div>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -60,7 +74,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-architectural-grid pointer-events-none opacity-50" />
         
         <div className="max-w-md w-full z-10 space-y-8 pt-6">
-          {!user && (
+          {!user && !isClientMode && (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -98,7 +112,7 @@ export default function Home() {
 
           {/* Main Action Grid */}
           <div className="grid grid-cols-2 gap-4">
-            <Link to="/calculate" className="col-span-2 group">
+            <Link to={`/calculate${clientParam}`} className="col-span-2 group">
               <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 hover:border-blue-500/50 transition-all active:scale-[0.98] relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                   <Calculator size={80} />
@@ -119,7 +133,7 @@ export default function Home() {
               </div>
             </Link>
 
-            <Link to="/schedule" className="group">
+            <Link to={`/schedule${clientParam}`} className="group">
               <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 hover:border-blue-500/50 transition-all active:scale-[0.98] h-full flex flex-col">
                 <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 mb-3">
                   <MessageSquare size={20} />
@@ -129,7 +143,7 @@ export default function Home() {
               </div>
             </Link>
 
-            <Link to="/catalog" className="group">
+            <Link to={`/catalog${clientParam}`} className="group">
               <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 hover:border-blue-500/50 transition-all active:scale-[0.98] h-full flex flex-col">
                 <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 mb-3">
                   <Database size={20} />
@@ -142,7 +156,7 @@ export default function Home() {
 
           {/* Secondary Actions */}
           <div className="space-y-4">
-            {user && (
+            {user && !isClientMode && (
               <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
                 <div className="p-4 border-b border-slate-50 flex justify-between items-center">
                   <h3 className="font-black text-[10px] text-slate-400 uppercase tracking-[0.2em]">Últimos Orçamentos</h3>
@@ -172,7 +186,7 @@ export default function Home() {
               </div>
             )}
 
-            <Link to="/help" className="block">
+            <Link to={`/help${clientParam}`} className="block">
               <div className="bg-slate-900 p-5 rounded-3xl shadow-lg shadow-slate-200 flex items-center gap-4 group">
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
                   <HelpCircle size={20} />
@@ -185,18 +199,20 @@ export default function Home() {
               </div>
             </Link>
 
-            <Link to="/settings" className="block">
-              <div className="bg-blue-600 p-5 rounded-3xl shadow-lg shadow-blue-100 flex items-center gap-4 group">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
-                  <Download size={20} />
+            {!isClientMode && (
+              <Link to="/settings" className="block">
+                <div className="bg-blue-600 p-5 rounded-3xl shadow-lg shadow-blue-100 flex items-center gap-4 group">
+                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
+                    <Download size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-sm text-white">Baixar App no Celular</h3>
+                    <p className="text-[10px] text-white/70 font-medium">Instalar na tela de início</p>
+                  </div>
+                  <ArrowRight size={16} className="text-white/30 group-hover:text-white group-hover:translate-x-1 transition-all" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-sm text-white">Baixar App no Celular</h3>
-                  <p className="text-[10px] text-white/70 font-medium">Instalar na tela de início</p>
-                </div>
-                <ArrowRight size={16} className="text-white/30 group-hover:text-white group-hover:translate-x-1 transition-all" />
-              </div>
-            </Link>
+              </Link>
+            )}
           </div>
         </div>
       </main>

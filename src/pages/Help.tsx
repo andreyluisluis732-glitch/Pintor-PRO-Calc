@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { ArrowLeft, HelpCircle, Send, Loader2, CheckCircle2, Info, Calculator, MessageSquare, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
@@ -7,6 +7,9 @@ import { GoogleGenAI } from "@google/genai";
 
 export default function HelpPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const search = location.search;
+  const isClientMode = new URLSearchParams(search).get('mode') === 'client';
   const [difficulty, setDifficulty] = useState('');
   const [loading, setLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
@@ -49,9 +52,11 @@ export default function HelpPage() {
             <h1 className="text-lg font-black text-blue-600 italic uppercase tracking-tighter">Ajuda</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
-              <Settings size={18} />
-            </Link>
+            {!isClientMode && (
+              <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+                <Settings size={18} />
+              </Link>
+            )}
           </div>
         </div>
       </header>

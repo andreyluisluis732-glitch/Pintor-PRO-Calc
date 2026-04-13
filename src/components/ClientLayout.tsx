@@ -8,19 +8,24 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
+  const search = location.search;
+  const isClientMode = new URLSearchParams(search).get('mode') === 'client';
 
-  const publicPages = ['/', '/calculate', '/results', '/catalog', '/login', '/schedule', '/help'];
+  const publicPages = ['/login'];
+  const clientPages = ['/', '/calculate', '/results', '/catalog', '/schedule', '/help'];
+  
   const isPublicPage = publicPages.includes(pathname);
+  const isClientAccessible = clientPages.includes(pathname) && isClientMode;
 
   useEffect(() => {
     if (!loading) {
-      if (!user && !isPublicPage) {
+      if (!user && !isPublicPage && !isClientAccessible) {
         navigate('/login');
       } else if (user && pathname === '/login') {
         navigate('/');
       }
     }
-  }, [user, loading, pathname, navigate, isPublicPage]);
+  }, [user, loading, pathname, navigate, isPublicPage, isClientAccessible]);
 
   if (loading) {
     return (
@@ -30,7 +35,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user && !isPublicPage) {
+  if (!user && !isPublicPage && !isClientAccessible) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />

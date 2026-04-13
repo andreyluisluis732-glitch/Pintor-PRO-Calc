@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Search, Calendar, Ruler, MoreHorizontal, Plus, Clock, CheckCircle2, Phone, Mail, MapPin, FileText, X, Edit2, Trash2, Settings, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
@@ -12,6 +12,11 @@ export default function HistoryPage() {
   const [activeTab, setActiveTab] = useState<'estimates' | 'appointments'>('estimates');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewingApp, setViewingApp] = useState<Appointment | null>(null);
+
+  const location = useLocation();
+  const search = location.search;
+  const isClientMode = new URLSearchParams(search).get('mode') === 'client';
+  const clientParam = isClientMode ? '?mode=client' : '';
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { 
@@ -46,12 +51,14 @@ export default function HistoryPage() {
             <h1 className="text-xl font-black text-blue-600 italic uppercase tracking-tighter">Pintor PRO Calc</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/help" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+            <Link to={`/help${clientParam}`} className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
               <HelpCircle size={18} />
             </Link>
-            <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
-              <Settings size={18} />
-            </Link>
+            {!isClientMode && (
+              <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+                <Settings size={18} />
+              </Link>
+            )}
           </div>
         </div>
       </header>
@@ -125,7 +132,7 @@ export default function HistoryPage() {
                           className="flex justify-between items-start cursor-pointer"
                           onClick={() => {
                             setCurrentEstimate(est);
-                            navigate('/results');
+                            navigate('/results' + clientParam);
                           }}
                         >
                           <div className="flex-1">
@@ -294,7 +301,7 @@ export default function HistoryPage() {
 
       <div className="fixed bottom-24 right-6">
         <button 
-          onClick={() => navigate('/calculate')}
+          onClick={() => navigate('/calculate' + clientParam)}
           className="w-14 h-14 bg-gradient-to-b from-primary to-primary-container text-white rounded-xl shadow-xl flex items-center justify-center active:scale-90 transition-transform duration-150"
         >
           <Plus size={32} strokeWidth={3} />
@@ -403,7 +410,7 @@ export default function HistoryPage() {
                   <button 
                     onClick={() => {
                       setViewingApp(null);
-                      navigate('/schedule');
+                      navigate('/schedule' + clientParam);
                     }}
                     className="flex-1 h-14 bg-primary text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg"
                   >

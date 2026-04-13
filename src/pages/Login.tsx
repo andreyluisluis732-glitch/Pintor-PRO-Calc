@@ -12,7 +12,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User, ArrowRight, Loader2, Paintbrush, Chrome, AlertCircle, ExternalLink } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Paintbrush, Chrome, AlertCircle, ExternalLink, Database } from 'lucide-react';
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -54,12 +54,14 @@ export default function LoginPage() {
       navigate('/');
     } catch (err: unknown) {
       console.error(err);
-      const firebaseError = err as { code?: string };
+      const firebaseError = err as { code?: string; message?: string };
       if (firebaseError.code === 'auth/operation-not-allowed') {
         setSetupError(true);
         setError('O login com Google precisa ser ativado no Console do Firebase.');
+      } else if (firebaseError.code === 'auth/unauthorized-domain') {
+        setError('Este domínio não está autorizado no Firebase. Adicione o domínio do app nas configurações de Autenticação.');
       } else {
-        setError('Falha ao entrar com Google. Tente novamente.');
+        setError(`Erro: ${firebaseError.code || 'Falha ao entrar com Google'}. Verifique o console.`);
       }
     } finally {
       setLoading(false);
@@ -98,7 +100,7 @@ export default function LoginPage() {
       navigate('/');
     } catch (err: unknown) {
       console.error(err);
-      const firebaseError = err as { code?: string };
+      const firebaseError = err as { code?: string; message?: string };
       if (firebaseError.code === 'auth/operation-not-allowed') {
         setSetupError(true);
         setError('O login por E-mail/Senha precisa ser ativado no Console do Firebase.');
@@ -108,8 +110,10 @@ export default function LoginPage() {
         setError('Este e-mail já está em uso.');
       } else if (firebaseError.code === 'auth/weak-password') {
         setError('A senha deve ter pelo menos 6 caracteres.');
+      } else if (firebaseError.code === 'auth/unauthorized-domain') {
+        setError('Domínio não autorizado no Firebase.');
       } else {
-        setError('Ocorreu um erro. Tente novamente.');
+        setError(`Erro: ${firebaseError.code || 'Ocorreu um erro'}.`);
       }
     } finally {
       setLoading(false);
@@ -193,16 +197,23 @@ export default function LoginPage() {
             )}
           </AnimatePresence>
 
-          {error && !setupError && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm font-medium rounded-xl flex items-center gap-3"
-            >
-              <AlertCircle size={18} />
-              {error}
-            </motion.div>
-          )}
+            {error && !setupError && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm font-medium rounded-xl space-y-2"
+              >
+                <div className="flex items-center gap-3">
+                  <AlertCircle size={18} />
+                  <span>{error}</span>
+                </div>
+                {error.includes('auth/') && (
+                  <div className="mt-2 pt-2 border-t border-red-100 text-[10px] text-red-400 leading-relaxed uppercase tracking-wider font-bold">
+                    Dica: Verifique se o login foi ativado no Console do Firebase e se o domínio está autorizado.
+                  </div>
+                )}
+              </motion.div>
+            )}
 
           <div className="space-y-6">
             <button
@@ -298,13 +309,17 @@ export default function LoginPage() {
                 : 'Já tem uma conta? Faça o login'}
             </button>
 
-            <div className="pt-2">
+            <div className="pt-4 border-t border-slate-50">
               <button
                 onClick={handleLocalLogin}
-                className="text-slate-400 font-bold hover:text-slate-600 transition-colors text-[10px] uppercase tracking-widest"
+                className="w-full py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
               >
-                Entrar sem Firebase (Modo Local)
+                <Database size={18} />
+                Entrar no Modo Local (Sem Firebase)
               </button>
+              <p className="text-[10px] text-center text-slate-400 mt-3 uppercase tracking-widest font-bold">
+                Recomendado se o Google/E-mail não estiverem configurados
+              </p>
             </div>
           </div>
         </div>

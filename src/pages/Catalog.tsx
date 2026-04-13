@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Tag, Ruler, Info, Palette, Layers, HelpCircle, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
@@ -7,6 +7,10 @@ import { PRODUCT_CATALOG } from '../constants/catalog';
 
 export default function CatalogPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const search = location.search;
+  const isClientMode = new URLSearchParams(search).get('mode') === 'client';
+  const clientParam = isClientMode ? '?mode=client' : '';
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('Todas');
 
@@ -37,12 +41,14 @@ export default function CatalogPage() {
             <h1 className="text-lg font-black text-blue-600 italic uppercase tracking-tighter">Catálogo</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/help" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+            <Link to={`/help${clientParam}`} className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
               <HelpCircle size={18} />
             </Link>
-            <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
-              <Settings size={18} />
-            </Link>
+            {!isClientMode && (
+              <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
+                <Settings size={18} />
+              </Link>
+            )}
           </div>
         </div>
       </header>
@@ -176,7 +182,7 @@ export default function CatalogPage() {
                 </div>
 
                 <button 
-                  onClick={() => navigate(`/calculate?productId=${product.id}`)}
+                  onClick={() => navigate(`/calculate${clientParam}${clientParam ? '&' : '?'}productId=${product.id}`)}
                   className="w-full mt-6 h-12 bg-primary text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
                   <Layers size={18} />
