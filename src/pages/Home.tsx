@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, Settings, AlertCircle, Download } from 'lucide-react';
+import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, AlertCircle, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
@@ -46,24 +46,15 @@ export default function Home() {
               <HelpCircle size={18} />
             </Link>
             {!isClientMode && (
-              <>
-                <Link 
-                  to="/settings"
-                  className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all active:scale-90"
-                  title="Ajustes"
-                >
-                  <Settings size={18} />
-                </Link>
-                <button 
-                  onClick={logout}
-                  className="active:scale-90 transition-all ml-1"
-                  title="Sair"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-blue-200">
-                    {user?.displayName?.[0] || user?.email?.[0] || 'P'}
-                  </div>
-                </button>
-              </>
+              <button 
+                onClick={logout}
+                className="active:scale-90 transition-all ml-1"
+                title="Sair"
+              >
+                <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-blue-200">
+                  {user?.displayName?.[0] || user?.email?.[0] || 'P'}
+                </div>
+              </button>
             )}
           </div>
         </div>

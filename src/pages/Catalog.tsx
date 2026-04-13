@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Search, Tag, Ruler, Info, Palette, Layers, HelpCircle, Settings } from 'lucide-react';
+import { ArrowLeft, Search, Tag, Ruler, Info, Palette, Layers, HelpCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { PRODUCT_CATALOG } from '../constants/catalog';
@@ -44,11 +44,6 @@ export default function CatalogPage() {
             <Link to={`/help${clientParam}`} className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
               <HelpCircle size={18} />
             </Link>
-            {!isClientMode && (
-              <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
-                <Settings size={18} />
-              </Link>
-            )}
           </div>
         </div>
       </header>

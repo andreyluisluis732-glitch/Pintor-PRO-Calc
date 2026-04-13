@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Calendar as CalendarIcon, Clock, CheckCircle2, Trash2, Plus, Edit2, Phone, Mail, MapPin, FileText, X, HelpCircle, Settings } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Clock, CheckCircle2, Trash2, Plus, Edit2, Phone, Mail, MapPin, FileText, X, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate, Appointment } from '../context/EstimateContext';
@@ -178,11 +178,6 @@ export default function SchedulePage() {
             <Link to={`/help${clientParam}`} className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
               <HelpCircle size={18} />
             </Link>
-            {!isClientMode && (
-              <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
-                <Settings size={18} />
-              </Link>
-            )}
             {user && (
               <button 
                 onClick={() => setIsAdding(true)}

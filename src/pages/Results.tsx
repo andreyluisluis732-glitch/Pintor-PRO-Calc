@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon, HelpCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Send, FileText, Bookmark, Calendar as CalendarIcon, HelpCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -232,11 +232,6 @@ export default function ResultsPage() {
             <Link to={`/help${clientParam}`} className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
               <HelpCircle size={18} />
             </Link>
-            {!isClientMode && (
-              <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
-                <Settings size={18} />
-              </Link>
-            )}
           </div>
         </div>
       </header>

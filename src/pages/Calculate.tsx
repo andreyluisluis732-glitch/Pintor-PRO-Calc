@@ -1,6 +1,6 @@
 import React, { useState, Suspense } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Ruler, Info, Palette, Tag, HelpCircle, Clock, Settings, Paintbrush, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Ruler, Info, Palette, Tag, HelpCircle, Clock, Paintbrush, Image as ImageIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate, PropertyType, PricingType } from '../context/EstimateContext';
@@ -155,11 +155,6 @@ function CalculateContent() {
             <Link to={`/help${clientParam}`} className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
               <HelpCircle size={18} />
             </Link>
-            {!isClientMode && (
-              <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
-                <Settings size={18} />
-              </Link>
-            )}
           </div>
         </div>
       </header>

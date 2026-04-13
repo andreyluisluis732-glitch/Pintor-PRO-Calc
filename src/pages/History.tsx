@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Search, Calendar, Ruler, MoreHorizontal, Plus, Clock, CheckCircle2, Phone, Mail, MapPin, FileText, X, Edit2, Trash2, Settings, HelpCircle } from 'lucide-react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { Search, Calendar, Ruler, MoreHorizontal, Plus, Clock, CheckCircle2, Phone, Mail, MapPin, FileText, X, Edit2, Trash2, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate, Appointment } from '../context/EstimateContext';
@@ -54,11 +54,6 @@ export default function HistoryPage() {
             <Link to={`/help${clientParam}`} className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
               <HelpCircle size={18} />
             </Link>
-            {!isClientMode && (
-              <Link to="/settings" className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all active:scale-90">
-                <Settings size={18} />
-              </Link>
-            )}
           </div>
         </div>
       </header>
