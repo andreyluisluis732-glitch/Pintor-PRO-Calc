@@ -141,6 +141,7 @@ interface EstimateContextType {
     businessPhone?: string; 
     laborPricePerM2?: number;
     defaultPrices?: Record<PricingType, number>;
+    isPro?: boolean;
   }) => Promise<void>;
   saveEstimate: (estimate: Omit<Estimate, 'id' | 'uid'>) => Promise<void>;
   saveAppointment: (appointment: Omit<Appointment, 'id' | 'uid'>) => Promise<void>;
@@ -362,10 +363,12 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     businessPhone?: string; 
     laborPricePerM2?: number;
     defaultPrices?: Record<PricingType, number>;
+    isPro?: boolean;
   }) => {
     // Update local state first
     if (settings.businessPhone !== undefined) setBusinessPhoneState(settings.businessPhone);
     if (settings.laborPricePerM2 !== undefined) setLaborPricePerM2(settings.laborPricePerM2);
+    if (settings.isPro !== undefined) setIsPro(settings.isPro);
     if (settings.defaultPrices !== undefined) {
       setDefaultPrices(prev => ({ ...prev, ...settings.defaultPrices }));
     }
@@ -375,7 +378,8 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('guestSettings', JSON.stringify({
         businessPhone: settings.businessPhone ?? businessPhone,
         laborPricePerM2: settings.laborPricePerM2 ?? laborPricePerM2,
-        defaultPrices: settings.defaultPrices ?? defaultPrices
+        defaultPrices: settings.defaultPrices ?? defaultPrices,
+        isPro: settings.isPro ?? isPro
       }));
       return;
     }

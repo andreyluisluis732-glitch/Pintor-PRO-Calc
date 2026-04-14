@@ -109,6 +109,31 @@ export default function Home() {
             </motion.h1>
           </div>
 
+          {/* PRO Banner */}
+          {!isPro && (
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-gradient-to-r from-amber-500 to-orange-600 p-4 rounded-3xl shadow-lg shadow-orange-200 relative overflow-hidden group"
+            >
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                <Crown size={60} />
+              </div>
+              <div className="relative z-10 flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-white font-black text-sm uppercase tracking-tight">Seja Pintor PRO</h3>
+                  <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest">Desbloqueie recursos exclusivos</p>
+                </div>
+                <Link 
+                  to="/vendas" 
+                  className="bg-white text-orange-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md active:scale-95 transition-all"
+                >
+                  Ver Oferta
+                </Link>
+              </div>
+            </motion.div>
+          )}
+
           {/* Main Action Grid */}
           <div className="grid grid-cols-2 gap-4">
             <Link to={`/calculate${clientParam}`} className="col-span-2 group">

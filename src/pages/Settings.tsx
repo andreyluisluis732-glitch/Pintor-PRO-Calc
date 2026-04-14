@@ -334,10 +334,18 @@ export default function SettingsPage() {
             </h3>
             
             {isPro ? (
-              <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100">
-                <p className="text-xs text-yellow-800 leading-relaxed">
-                  Parabéns! Você tem acesso a todas as funcionalidades exclusivas do Pintor PRO Calc.
-                </p>
+              <div className="space-y-4">
+                <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100">
+                  <p className="text-xs text-yellow-800 leading-relaxed">
+                    Parabéns! Você tem acesso a todas as funcionalidades exclusivas do Pintor PRO Calc.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => updateSettings({ isPro: false })}
+                  className="w-full py-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest underline text-center"
+                >
+                  Desativar Modo PRO (Teste)
+                </button>
               </div>
             ) : (
               <div className="space-y-4">
@@ -368,9 +376,15 @@ export default function SettingsPage() {
                   Quero ser PRO agora
                   <ExternalLink size={16} />
                 </a>
+                <button 
+                  onClick={() => updateSettings({ isPro: true })}
+                  className="w-full py-2 text-blue-600 font-bold text-[10px] uppercase tracking-widest underline text-center"
+                >
+                  Simular Ativação PRO (Teste)
+                </button>
                 <Link 
                   to="/vendas" 
-                  className="block text-center text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-2 hover:underline"
+                  className="block text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 hover:underline"
                 >
                   Ver Detalhes da Oferta
                 </Link>

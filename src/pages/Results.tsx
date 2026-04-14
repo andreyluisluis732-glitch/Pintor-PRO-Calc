@@ -489,6 +489,30 @@ export default function ResultsPage() {
             <FileText size={20} />
             Exportar PDF do Orçamento
           </button>
+
+          {!isPro && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="bg-gradient-to-br from-slate-900 to-blue-900 p-6 rounded-3xl shadow-xl relative overflow-hidden group"
+            >
+              <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:rotate-12 transition-transform">
+                <Crown size={80} />
+              </div>
+              <div className="relative z-10">
+                <h3 className="text-white font-black text-lg uppercase tracking-tighter mb-2">Quer salvar orçamentos ilimitados?</h3>
+                <p className="text-white/70 text-xs mb-6 leading-relaxed">Assine o plano PRO e tenha histórico em nuvem, suporte VIP e muito mais.</p>
+                <Link 
+                  to="/vendas" 
+                  className="inline-flex items-center gap-2 bg-yellow-500 text-yellow-950 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all"
+                >
+                  Conhecer Plano PRO
+                  <ArrowRight size={14} />
+                </Link>
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* Material Selection Insight */}

@@ -309,6 +309,20 @@ export default function LoginPage() {
                 : 'Já tem uma conta? Faça o login'}
             </button>
 
+            <Link 
+              to="/vendas"
+              className="block w-full py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-orange-200 active:scale-[0.98] transition-all"
+            >
+              Conheça o Plano PRO
+            </Link>
+
+            <Link 
+              to="/anuncio"
+              className="block w-full py-2 text-blue-600 font-bold text-[10px] uppercase tracking-widest hover:underline"
+            >
+              Ver Demonstração de Elite
+            </Link>
+
             <div className="pt-4 border-t border-slate-50">
               <button
                 onClick={handleLocalLogin}

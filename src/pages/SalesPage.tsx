@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle2, Calculator, Send, FileText, Smartphone, ShieldCheck, ArrowRight, Star, Zap, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 export default function SalesPage() {
   const checkoutUrl = "https://pay.cakto.com.br/qim4js2_840385";
@@ -30,6 +31,17 @@ export default function SalesPage() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-blue-100">
+      {/* Top Bar */}
+      <div className="fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md z-50 border-b border-slate-100 px-6 flex items-center justify-between">
+        <div className="font-black text-xl tracking-tighter text-blue-600">Pintor PRO</div>
+        <Link 
+          to="/login"
+          className="text-xs font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 transition-colors"
+        >
+          Entrar
+        </Link>
+      </div>
+
       {/* Hero Section */}
       <section className="relative pt-20 pb-16 px-6 overflow-hidden bg-gradient-to-b from-blue-50 to-white">
         <div className="max-w-4xl mx-auto text-center relative z-10">
