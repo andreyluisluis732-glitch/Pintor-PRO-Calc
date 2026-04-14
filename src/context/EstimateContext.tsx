@@ -439,6 +439,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'estimates');
+      throw error;
     }
   };
 
@@ -467,6 +468,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'appointments');
+      throw error;
     }
   };
 

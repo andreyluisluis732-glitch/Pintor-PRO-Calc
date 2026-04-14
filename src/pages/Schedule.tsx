@@ -41,92 +41,105 @@ export default function SchedulePage() {
   const handleSave = async () => {
     if (!newApp.clientName || !newApp.clientPhone) return;
     
-    if (editingId) {
-      const existingApp = appointments.find(a => a.id === editingId);
-      if (!existingApp) return;
+    try {
+      if (editingId) {
+        const existingApp = appointments.find(a => a.id === editingId);
+        if (!existingApp) return;
 
-      const updatedApp: Appointment = {
-        ...existingApp,
-        ...newApp,
-        status: 'Pendente'
-      };
-      await updateAppointment(updatedApp);
-      setEditingId(null);
-    } else {
-      const appointmentData = {
-        ...newApp,
-        status: 'Pendente' as const
-      };
-      await saveAppointment(appointmentData);
-    }
-
-    let phone = (user ? newApp.clientPhone : businessPhone).replace(/\D/g, '');
-    if (phone.length >= 10 && !phone.startsWith('55')) {
-      phone = '55' + phone;
-    }
-    
-    const formattedDate = newApp.date.split('-').reverse().join('/');
-    
-    let message = '';
-    if (user) {
-      message = `*Pintor PRO - Agendamento Confirmado*\n\n`;
-      message += `Olá *${newApp.clientName}*, confirmo nossa consulta técnica:\n`;
-      message += `📅 *Data:* ${formattedDate}\n`;
-      message += `⏰ *Horário:* ${newApp.time}\n\n`;
-
-      if (currentEstimate && currentEstimate.totalCost) {
-        message += `*--- Resumo do Orçamento ---*\n`;
-        message += `🏠 *Imóvel:* ${currentEstimate.propertyType || 'Não informado'}\n`;
-        message += `📏 *Área:* ${currentEstimate.area}m²\n`;
-        message += `🎨 *Cor:* ${currentEstimate.color || 'A definir'}\n`;
-        
-        if (currentEstimate.includePaint) {
-          message += `📦 *Material:* Incluso (${currentEstimate.packageCount} un)\n`;
-        } else {
-          message += `📦 *Material:* Por conta do cliente\n`;
-        }
-        
-        message += `💰 *Valor Estimado:* R$ ${currentEstimate.totalCost.toLocaleString('pt-BR')}\n\n`;
-        message += `_Estarei aí para validar os detalhes e fechar o serviço!_`;
+        const updatedApp: Appointment = {
+          ...existingApp,
+          ...newApp,
+          status: 'Pendente'
+        };
+        await updateAppointment(updatedApp);
+        setEditingId(null);
       } else {
-        message += `Estarei no local para realizar a medição e passar o orçamento detalhado.`;
+        const appointmentData = {
+          ...newApp,
+          status: 'Pendente' as const
+        };
+        await saveAppointment(appointmentData);
       }
-    } else {
-      message = `*Pintor PRO - Novo Agendamento de Consulta*\n\n`;
-      message += `Olá! Gostaria de agendar uma consulta técnica:\n\n`;
-      message += `👤 *Cliente:* ${newApp.clientName}\n`;
-      message += `📞 *WhatsApp:* ${newApp.clientPhone}\n`;
-      if (newApp.clientEmail) {
-        message += `📧 *E-mail:* ${newApp.clientEmail}\n`;
+
+      let phone = (user ? newApp.clientPhone : businessPhone).replace(/\D/g, '');
+      if (phone.length >= 10 && !phone.startsWith('55')) {
+        phone = '55' + phone;
       }
-      message += `📅 *Data:* ${formattedDate}\n`;
-      message += `⏰ *Horário:* ${newApp.time}\n`;
-      message += `📍 *Endereço:* ${newApp.clientAddress || 'Não informado'}\n\n`;
-      if (newApp.notes) {
-        message += `📝 *Informações Complementares:* ${newApp.notes}\n\n`;
+      
+      const formattedDate = newApp.date.split('-').reverse().join('/');
+      
+      let message = '';
+      if (user) {
+        message = `*Pintor PRO - Agendamento Confirmado*\n\n`;
+        message += `Olá *${newApp.clientName}*, confirmo nossa consulta técnica:\n`;
+        message += `📅 *Data:* ${formattedDate}\n`;
+        message += `⏰ *Horário:* ${newApp.time}\n\n`;
+
+        if (currentEstimate && currentEstimate.totalCost) {
+          message += `*--- Resumo do Orçamento ---*\n`;
+          message += `🏠 *Imóvel:* ${currentEstimate.propertyType || 'Não informado'}\n`;
+          message += `📏 *Área:* ${currentEstimate.area}m²\n`;
+          message += `🎨 *Cor:* ${currentEstimate.color || 'A definir'}\n`;
+          
+          if (currentEstimate.includePaint) {
+            message += `📦 *Material:* Incluso (${currentEstimate.packageCount} un)\n`;
+          } else {
+            message += `📦 *Material:* Por conta do cliente\n`;
+          }
+          
+          message += `💰 *Valor Estimado:* R$ ${currentEstimate.totalCost.toLocaleString('pt-BR')}\n\n`;
+          message += `_Estarei aí para validar os detalhes e fechar o serviço!_`;
+        } else {
+          message += `Estarei no local para realizar a medição e passar o orçamento detalhado.`;
+        }
+      } else {
+        message = `*Pintor PRO - Novo Agendamento de Consulta*\n\n`;
+        message += `Olá! Gostaria de agendar uma consulta técnica:\n\n`;
+        message += `👤 *Cliente:* ${newApp.clientName}\n`;
+        message += `📞 *WhatsApp:* ${newApp.clientPhone}\n`;
+        if (newApp.clientEmail) {
+          message += `📧 *E-mail:* ${newApp.clientEmail}\n`;
+        }
+        message += `📅 *Data:* ${formattedDate}\n`;
+        message += `⏰ *Horário:* ${newApp.time}\n`;
+        message += `📍 *Endereço:* ${newApp.clientAddress || 'Não informado'}\n\n`;
+        if (newApp.notes) {
+          message += `📝 *Informações Complementares:* ${newApp.notes}\n\n`;
+        }
+        message += `_Aguardando sua confirmação!_`;
       }
-      message += `_Aguardando sua confirmação!_`;
+
+      const encodedMessage = encodeURIComponent(message);
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+      
+      setIsAdding(false);
+      setShowSuccess(true);
+      
+      if (phone) {
+        try {
+          window.open(whatsappUrl, '_blank');
+        } catch {
+          const link = document.createElement('a');
+          link.href = whatsappUrl;
+          link.target = '_blank';
+          link.click();
+        }
+      }
+
+      setTimeout(() => setShowSuccess(false), 3000);
+      
+      setNewApp({
+        clientName: '',
+        clientPhone: '',
+        clientEmail: '',
+        clientAddress: '',
+        notes: '',
+        date: new Date().toISOString().split('T')[0],
+        time: '09:00'
+      });
+    } catch {
+      alert("Erro ao salvar agendamento. Verifique sua conexão.");
     }
-
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
-    
-    setIsAdding(false);
-    setShowSuccess(true);
-    
-    window.open(whatsappUrl, '_blank');
-
-    setTimeout(() => setShowSuccess(false), 3000);
-    
-    setNewApp({
-      clientName: '',
-      clientPhone: '',
-      clientEmail: '',
-      clientAddress: '',
-      notes: '',
-      date: new Date().toISOString().split('T')[0],
-      time: '09:00'
-    });
   };
 
   const handleEdit = (app: Appointment) => {

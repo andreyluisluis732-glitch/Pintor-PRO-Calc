@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import ClientLayout from './components/ClientLayout';
+import { useEstimate } from './context/EstimateContext';
 import Home from './pages/Home';
 import Calculate from './pages/Calculate';
 import Results from './pages/Results';
@@ -14,24 +16,40 @@ import SalesPage from './pages/SalesPage';
 import AdPage from './pages/AdPage';
 import SupabaseTest from './pages/SupabaseTest';
 
+function AppRoutes() {
+  const { isPro, loading } = useEstimate();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route path="/" element={isPro ? <Home /> : <AdPage />} />
+      <Route path="/calculate" element={<Calculate />} />
+      <Route path="/results" element={<Results />} />
+      <Route path="/catalog" element={<Catalog />} />
+      <Route path="/history" element={<History />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/schedule" element={<Schedule />} />
+      <Route path="/help" element={<Help />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/vendas" element={<SalesPage />} />
+      <Route path="/anuncio" element={<AdPage />} />
+      <Route path="/supabase-test" element={<SupabaseTest />} />
+    </Routes>
+  );
+}
+
 function App() {
   return (
     <Router>
       <ClientLayout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/calculate" element={<Calculate />} />
-          <Route path="/results" element={<Results />} />
-          <Route path="/catalog" element={<Catalog />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/schedule" element={<Schedule />} />
-          <Route path="/help" element={<Help />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/vendas" element={<SalesPage />} />
-          <Route path="/anuncio" element={<AdPage />} />
-          <Route path="/supabase-test" element={<SupabaseTest />} />
-        </Routes>
+        <AppRoutes />
       </ClientLayout>
     </Router>
   );

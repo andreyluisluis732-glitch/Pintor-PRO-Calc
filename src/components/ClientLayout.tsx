@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { EstimateProvider, useEstimate } from '../context/EstimateContext';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useEstimate();
+  const { user, loading, isPro } = useEstimate();
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
@@ -20,12 +20,14 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading) {
       if (!user && !isPublicPage && !isClientAccessible) {
-        navigate('/login');
-      } else if (user && pathname === '/login') {
+        navigate('/anuncio');
+      } else if (user && !isPro && !isPublicPage && !isClientAccessible) {
+        navigate('/anuncio');
+      } else if (user && isPro && pathname === '/login') {
         navigate('/');
       }
     }
-  }, [user, loading, pathname, navigate, isPublicPage, isClientAccessible]);
+  }, [user, loading, isPro, pathname, navigate, isPublicPage, isClientAccessible]);
 
   if (loading) {
     return (

@@ -38,13 +38,13 @@ export default function AdPage() {
         <div className="absolute inset-0 bg-architectural-grid opacity-20 pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-gradient-to-b from-blue-600/20 to-transparent pointer-events-none" />
         
-        <div className="max-w-4xl mx-auto text-center relative z-10">
+        <div className="max-w-6xl mx-auto text-center relative z-10">
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-8 border border-blue-500/30"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500/20 text-blue-400 rounded-full text-xs font-black uppercase tracking-[0.4em] mb-12 border border-blue-500/30"
           >
-            <Trophy size={14} />
+            <Trophy size={16} />
             O Aplicativo Definitivo para Pintura
           </motion.div>
           
@@ -52,18 +52,18 @@ export default function AdPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.95] mb-8"
+            className="text-6xl md:text-9xl font-black tracking-tighter leading-[0.9] mb-12"
           >
-            PARE DE DAR <span className="text-blue-500">DESCONTO</span> E COMECE A DAR <span className="text-blue-500">RESULTADO!</span>
+            PARE DE DAR <span className="text-blue-500">DESCONTO</span> <br className="hidden md:block" /> E COMECE A DAR <span className="text-blue-500">RESULTADO!</span>
           </motion.h1>
           
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-lg md:text-2xl text-slate-400 mb-12 max-w-3xl mx-auto leading-relaxed font-medium"
+            className="text-xl md:text-3xl text-slate-400 mb-16 max-w-4xl mx-auto leading-relaxed font-medium"
           >
-            A ferramenta que separa os "curiosos" dos <span className="text-white font-bold underline decoration-blue-500 underline-offset-4">Pintores de Elite</span>. Gere orçamentos profissionais em segundos e feche serviços 3x mais caros.
+            A ferramenta que separa os "curiosos" dos <span className="text-white font-bold underline decoration-blue-500 underline-offset-8">Pintores de Elite</span>. Gere orçamentos profissionais em segundos e feche serviços 3x mais caros.
           </motion.p>
           
           <motion.div

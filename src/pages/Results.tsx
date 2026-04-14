@@ -37,42 +37,46 @@ export default function ResultsPage() {
     completo: 'Mão de obra + Material'
   };
 
-  const handleSave = () => {
-    saveEstimate({
-      ...currentEstimate as {
-        area: number;
-        productId?: string;
-        color?: string;
-        packageSize?: 'liter' | 'can' | 'bucket';
-        pricingType?: string;
-        pricePerM2?: number;
-        fixedPrice?: number;
-        includePaint: boolean;
-        totalLiters?: number;
-        packageCount?: number;
-        materialCost?: number;
-        laborCost?: number;
-        totalCost?: number;
-        clientName?: string;
-        clientPhone?: string;
-        propertyType?: string;
-        city?: string;
-        neighborhood?: string;
-        location?: string;
-        mediaUrls?: string[];
-        notes?: string;
-      },
-      id: Math.random().toString(36).substr(2, 9),
-      title: currentEstimate.clientName 
-        ? `${currentEstimate.propertyType || 'Obra'}: ${currentEstimate.clientName}` 
-        : `${currentEstimate.propertyType || 'Projeto'} ${currentEstimate.area}m²`,
-    });
-    navigate('/history' + clientParam);
+  const handleSave = async () => {
+    try {
+      await saveEstimate({
+        ...currentEstimate as {
+          area: number;
+          productId?: string;
+          color?: string;
+          packageSize?: 'liter' | 'can' | 'bucket';
+          pricingType?: string;
+          pricePerM2?: number;
+          fixedPrice?: number;
+          includePaint: boolean;
+          totalLiters?: number;
+          packageCount?: number;
+          materialCost?: number;
+          laborCost?: number;
+          totalCost?: number;
+          clientName?: string;
+          clientPhone?: string;
+          propertyType?: string;
+          city?: string;
+          neighborhood?: string;
+          location?: string;
+          mediaUrls?: string[];
+          notes?: string;
+        },
+        id: Math.random().toString(36).substr(2, 9),
+        title: currentEstimate.clientName 
+          ? `${currentEstimate.propertyType || 'Obra'}: ${currentEstimate.clientName}` 
+          : `${currentEstimate.propertyType || 'Projeto'} ${currentEstimate.area}m²`,
+      });
+      navigate('/history' + clientParam);
+    } catch {
+      setError('Erro ao salvar orçamento. Verifique sua conexão.');
+    }
   };
 
   const handleSendToPainter = () => {
     if (!businessPhone) {
-      console.error('O consultor ainda não configurou o número de WhatsApp nas configurações.');
+      setError('O consultor ainda não configurou o número de WhatsApp.');
       return;
     }
 
@@ -82,6 +86,11 @@ export default function ResultsPage() {
     let phone = businessPhone.replace(/\D/g, '');
     if (phone.length >= 10 && !phone.startsWith('55')) {
       phone = '55' + phone;
+    }
+
+    if (!phone) {
+      setError('Número de WhatsApp inválido.');
+      return;
     }
 
     let message = `*ORÇAMENTO DE PINTURA - PINTOR PRO CALC*\n\n`;
@@ -119,7 +128,17 @@ export default function ResultsPage() {
     message += `\n\n_Gerado via Pintor PRO Calc_`;
 
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/${phone}?text=${encodedMessage}`, '_blank');
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+    
+    try {
+      window.open(whatsappUrl, '_blank');
+    } catch {
+      // Fallback if window.open is blocked
+      const link = document.createElement('a');
+      link.href = whatsappUrl;
+      link.target = '_blank';
+      link.click();
+    }
   };
   
   const handleExportPDF = () => {
