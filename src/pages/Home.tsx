@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, AlertCircle, Download } from 'lucide-react';
+import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, AlertCircle, Download, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
 
 export default function Home() {
-  const { history, user, logout } = useEstimate();
+  const { history, user, logout, isPro } = useEstimate();
   const location = useLocation();
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
@@ -27,9 +27,17 @@ export default function Home() {
               Pintor PRO Calc
             </div>
             {user && (
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                {('isLocal' in user) ? 'Modo Local' : 'Painel Profissional'}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                  {('isLocal' in user) ? 'Modo Local' : 'Painel Profissional'}
+                </span>
+                {isPro && (
+                  <span className="bg-yellow-400 text-yellow-900 text-[7px] font-black px-1 py-0.5 rounded-full uppercase tracking-tighter flex items-center gap-0.5">
+                    <Crown size={7} />
+                    PRO
+                  </span>
+                )}
+              </div>
             )}
             {isClientMode && !user && (
               <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.2em]">
@@ -191,18 +199,30 @@ export default function Home() {
             </Link>
 
             {!isClientMode && (
-              <Link to="/settings" className="block">
-                <div className="bg-blue-600 p-5 rounded-3xl shadow-lg shadow-blue-100 flex items-center gap-4 group">
-                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
-                    <Download size={20} />
+              <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-3xl shadow-xl shadow-blue-200 flex flex-col gap-4 group relative overflow-hidden">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+                <div className="flex items-center gap-4 relative z-10">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-white">
+                    <Download size={24} />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-bold text-sm text-white">Baixar App no Celular</h3>
-                    <p className="text-[10px] text-white/70 font-medium">Instalar na tela de início</p>
+                    <h3 className="font-black text-lg text-white leading-tight">Baixar App no Celular</h3>
+                    <p className="text-xs text-white/70 font-medium">Instale agora para acesso instantâneo</p>
                   </div>
-                  <ArrowRight size={16} className="text-white/30 group-hover:text-white group-hover:translate-x-1 transition-all" />
                 </div>
-              </Link>
+                <div className="space-y-3 relative z-10">
+                  <div className="p-3 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-sm">
+                    <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Passo a Passo</p>
+                    <p className="text-[11px] text-white/90 leading-relaxed">
+                      Toque nos <span className="font-bold">três pontinhos</span> (Android) ou no ícone de <span className="font-bold">compartilhar</span> (iPhone) e selecione <span className="font-bold">"Instalar Aplicativo"</span> ou <span className="font-bold">"Adicionar à Tela de Início"</span>.
+                    </p>
+                  </div>
+                  <Link to="/settings" className="w-full bg-white text-blue-700 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg">
+                    Ver Guia de Instalação
+                    <ArrowRight size={14} />
+                  </Link>
+                </div>
+              </div>
             )}
           </div>
         </div>

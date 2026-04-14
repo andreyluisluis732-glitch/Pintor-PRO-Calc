@@ -48,7 +48,7 @@ export interface Estimate {
   area: number;
   productId?: string;
   color?: string;
-  coats: number;
+  coats?: number;
   pricingType: PricingType;
   pricePerM2?: number;
   fixedPrice?: number;
@@ -131,6 +131,8 @@ interface EstimateContextType {
   appointments: Appointment[];
   businessPhone: string;
   laborPricePerM2: number;
+  isPro: boolean;
+  deferredPrompt: BeforeInstallPromptEvent | null;
   defaultPrices: Record<PricingType, number>;
   setBusinessPhone: (phone: string) => Promise<void>;
   loginLocally: (name: string) => void;
@@ -156,7 +158,6 @@ interface EstimateContextType {
     productId?: string; 
     color?: string;
     packageSize: 'liter' | 'can' | 'bucket';
-    coats: number; 
     pricingType: PricingType;
     pricePerM2?: number;
     fixedPrice?: number;
@@ -167,6 +168,15 @@ interface EstimateContextType {
 
 const EstimateContext = createContext<EstimateContextType | undefined>(undefined);
 
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
 export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | LocalUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -175,6 +185,22 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [businessPhone, setBusinessPhoneState] = useState<string>('');
   const [laborPricePerM2, setLaborPricePerM2] = useState<number>(20);
+  const [isPro, setIsPro] = useState<boolean>(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
   const [defaultPrices, setDefaultPrices] = useState<Record<PricingType, number>>({
     m2: 20,
     empreitada: 0,
@@ -259,6 +285,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
           const data = docSnap.data();
           setBusinessPhoneState(data.businessPhone || '');
           setLaborPricePerM2(data.laborPricePerM2 || 20);
+          setIsPro(!!data.isPro);
           if (data.defaultPrices) {
             setDefaultPrices(prev => ({ ...prev, ...data.defaultPrices }));
           }
@@ -313,6 +340,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
           const data = snapshot.docs[0].data();
           setBusinessPhoneState(data.businessPhone || '');
           setLaborPricePerM2(data.laborPricePerM2 || 20);
+          setIsPro(!!data.isPro);
           if (data.defaultPrices) {
             setDefaultPrices(prev => ({ ...prev, ...data.defaultPrices }));
           }
@@ -365,7 +393,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
 
   const loginLocally = (name: string) => {
     const localUser: LocalUser = {
-      uid: 'local_' + Math.random().toString(36).substr(2, 9),
+      uid: 'local_' + Math.random().toString(36).substring(2, 11),
       displayName: name,
       email: 'local@device.com',
       isLocal: true
@@ -484,14 +512,14 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     productId?: string; 
     color?: string;
     packageSize: 'liter' | 'can' | 'bucket';
-    coats: number; 
     pricingType: PricingType;
     pricePerM2?: number;
     fixedPrice?: number;
     mediaUrls?: string[];
     notes?: string;
   }) => {
-    const { area, productId, coats, pricePerM2, fixedPrice, packageSize, includePaint, pricingType } = data;
+    const { area, productId, pricePerM2, fixedPrice, packageSize, includePaint, pricingType } = data;
+    const coats = 2; // Default to 2 coats as requested to remove the option
     
     let totalLiters = 0;
     let packageCount = 0;
@@ -525,7 +553,8 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       laborCost = fixedPrice || defaultPrices[pricingType] || 0;
     }
 
-    const totalCost = includePaint ? (materialCost + laborCost) : laborCost;
+    const finalMaterialCost = includePaint ? Math.round(materialCost) : 0;
+    const totalCost = Math.round(finalMaterialCost + laborCost);
 
     setCurrentEstimate({
       ...data,
@@ -533,9 +562,9 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       title: `Orçamento - ${data.clientName || 'Sem Nome'}`,
       totalLiters: Math.round(totalLiters * 10) / 10,
       packageCount,
-      materialCost: Math.round(materialCost),
+      materialCost: finalMaterialCost,
       laborCost: Math.round(laborCost),
-      totalCost: Math.round(totalCost),
+      totalCost,
       date: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
       status: 'Aguardando'
     });
@@ -551,6 +580,8 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       appointments,
       businessPhone,
       laborPricePerM2,
+      isPro,
+      deferredPrompt,
       defaultPrices,
       setBusinessPhone,
       loginLocally,

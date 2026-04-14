@@ -15,6 +15,7 @@ export default function SchedulePage() {
   const [isAdding, setIsAdding] = useState(!user);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingApp, setViewingApp] = useState<Appointment | null>(null);
+  const [deletingAppId, setDeletingAppId] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
@@ -584,10 +585,7 @@ export default function SchedulePage() {
                   </button>
                   <button 
                     onClick={() => {
-                      if (window.confirm('Tem certeza que deseja excluir esta consulta?')) {
-                        deleteAppointment(viewingApp.id);
-                        setViewingApp(null);
-                      }
+                      setDeletingAppId(viewingApp.id);
                     }}
                     className="flex-1 h-14 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-bold flex items-center justify-center gap-2"
                   >
@@ -595,6 +593,51 @@ export default function SchedulePage() {
                     Excluir
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deletingAppId && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeletingAppId(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative w-full max-w-xs bg-white rounded-3xl p-6 shadow-2xl text-center"
+            >
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Excluir Consulta?</h3>
+              <p className="text-sm text-slate-500 mb-6">Esta ação não pode ser desfeita.</p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setDeletingAppId(null)}
+                  className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={() => {
+                    deleteAppointment(deletingAppId);
+                    setDeletingAppId(null);
+                    setViewingApp(null);
+                  }}
+                  className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-200"
+                >
+                  Excluir
+                </button>
               </div>
             </motion.div>
           </div>

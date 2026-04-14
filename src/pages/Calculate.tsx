@@ -1,6 +1,6 @@
 import React, { useState, Suspense } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Ruler, Info, Palette, Tag, HelpCircle, Clock, Paintbrush, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Ruler, Info, Palette, Tag, HelpCircle, Clock, Settings, Paintbrush, Image as ImageIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate, PropertyType, PricingType } from '../context/EstimateContext';
@@ -35,7 +35,6 @@ function CalculateContent() {
   const [productId, setProductId] = useState<string | undefined>(initialProductId);
   const [color, setColor] = useState<string | undefined>(initialProduct.colors[0].name);
   const [packageSize, setPackageSize] = useState<'liter' | 'can' | 'bucket'>('liter');
-  const [coats, setCoats] = useState('2');
   const [pricingType, setPricingType] = useState<PricingType>('m2');
   const [pricePerM2, setPricePerM2] = useState('');
   const [fixedPrice, setFixedPrice] = useState('');
@@ -106,35 +105,43 @@ function CalculateContent() {
   };
 
   const handleNext = async () => {
-    setError(null);
-    if (!wallSize) {
-      setError("Por favor, insira o tamanho do imóvel.");
+    if (!wallSize || parseFloat(wallSize) <= 0) {
+      setError("Por favor, insira um tamanho válido para o imóvel (maior que zero).");
       return;
     }
     
-    const mediaUrls = await uploadMedia();
-    
-    calculateEstimate({
-      clientName,
-      clientPhone,
-      propertyType,
-      city,
-      neighborhood,
-      location,
-      includePaint,
-      area: parseFloat(wallSize),
-      productId,
-      color,
-      packageSize,
-      coats: parseInt(coats),
-      pricingType,
-      pricePerM2: pricePerM2 ? parseFloat(pricePerM2) : undefined,
-      fixedPrice: fixedPrice ? parseFloat(fixedPrice) : undefined,
-      mediaUrls,
-      notes
-    });
-    
-    navigate('/results' + clientParam);
+    try {
+      setUploading(true);
+      setError(null);
+      
+      const mediaUrls = await uploadMedia();
+      
+      calculateEstimate({
+        clientName,
+        clientPhone,
+        propertyType,
+        city,
+        neighborhood,
+        location,
+        includePaint,
+        area: parseFloat(wallSize),
+        productId,
+        color,
+        packageSize,
+        pricingType,
+        pricePerM2: pricePerM2 ? parseFloat(pricePerM2) : undefined,
+        fixedPrice: fixedPrice ? parseFloat(fixedPrice) : undefined,
+        mediaUrls,
+        notes
+      });
+      
+      navigate('/results' + clientParam);
+    } catch (err) {
+      console.error("Erro ao processar orçamento:", err);
+      setError("Ocorreu um erro ao processar o orçamento. Tente novamente.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -532,30 +539,6 @@ function CalculateContent() {
               )}
             </div>
 
-            {/* Number of Coats Selector */}
-            <div className="space-y-3">
-              <label className="block text-xs font-bold tracking-widest uppercase text-on-surface-variant">Número de demãos</label>
-              <div className="flex bg-surface-low p-1.5 rounded-md gap-1">
-                {['1', '2', '3'].map((num) => (
-                  <label key={num} className="flex-1 text-center">
-                    <input 
-                      className="sr-only" 
-                      name="coats" 
-                      type="radio" 
-                      value={num}
-                      checked={coats === num}
-                      onChange={() => setCoats(num)}
-                    />
-                    <div className={`py-3 rounded-md cursor-pointer font-bold transition-all duration-200 ${
-                      coats === num ? 'bg-primary text-white shadow-md scale-105' : 'text-on-surface-variant hover:bg-surface-container-high'
-                    }`}>
-                      {num}
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-
             {/* Pricing Type Selection */}
             <div className="space-y-4">
               <label className="block text-xs font-bold tracking-widest uppercase text-on-surface-variant">
@@ -700,6 +683,10 @@ function CalculateContent() {
               </button>
               <button 
                 onClick={() => {
+                  if (!wallSize || parseFloat(wallSize) <= 0) {
+                    setError("Por favor, insira o tamanho do imóvel antes de calcular.");
+                    return;
+                  }
                   calculateEstimate({
                     clientName,
                     clientPhone,
@@ -712,7 +699,6 @@ function CalculateContent() {
                     productId,
                     color,
                     packageSize,
-                    coats: Number(coats),
                     pricingType,
                     pricePerM2: pricePerM2 ? Number(pricePerM2) : undefined,
                     fixedPrice: fixedPrice ? Number(fixedPrice) : undefined,

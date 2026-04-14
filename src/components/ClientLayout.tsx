@@ -11,7 +11,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
 
-  const publicPages = ['/login'];
+  const publicPages = ['/login', '/vendas'];
   const clientPages = ['/', '/calculate', '/results', '/catalog', '/schedule', '/help'];
   
   const isPublicPage = publicPages.includes(pathname);

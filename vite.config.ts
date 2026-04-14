@@ -15,6 +15,10 @@ export default defineConfig({
         short_name: 'PintorPRO',
         description: 'Calculadora profissional para orçamentos de pintura',
         theme_color: '#2563eb',
+        background_color: '#f0f2f5',
+        display: 'standalone',
+        start_url: '/',
+        orientation: 'portrait',
         icons: [
           {
             src: 'pwa-192x192.png',

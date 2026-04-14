@@ -10,6 +10,7 @@ import Settings from './pages/Settings';
 import Schedule from './pages/Schedule';
 import Help from './pages/Help';
 import Login from './pages/Login';
+import SalesPage from './pages/SalesPage';
 import SupabaseTest from './pages/SupabaseTest';
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/help" element={<Help />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/vendas" element={<SalesPage />} />
           <Route path="/supabase-test" element={<SupabaseTest />} />
         </Routes>
       </ClientLayout>

@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Send, FileText, Bookmark, Calendar as CalendarIcon, HelpCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon, HelpCircle, AlertCircle, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
 import { PRODUCT_CATALOG } from '../constants/catalog';
@@ -11,6 +11,7 @@ import { PRODUCT_CATALOG } from '../constants/catalog';
 export default function ResultsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [error, setError] = useState<string | null>(null);
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
   const clientParam = isClientMode ? '?mode=client' : '';
@@ -27,6 +28,15 @@ export default function ResultsPage() {
     );
   }
 
+  const pricingLabels: Record<string, string> = {
+    m2: 'Por m²',
+    empreitada: 'Empreitada',
+    diaria: 'Diária',
+    ambiente: 'Ambiente',
+    especifico: 'Específico',
+    completo: 'Mão de obra + Material'
+  };
+
   const handleSave = () => {
     saveEstimate({
       ...currentEstimate as {
@@ -34,7 +44,6 @@ export default function ResultsPage() {
         productId?: string;
         color?: string;
         packageSize?: 'liter' | 'can' | 'bucket';
-        coats: number;
         pricingType?: string;
         pricePerM2?: number;
         fixedPrice?: number;
@@ -75,15 +84,6 @@ export default function ResultsPage() {
       phone = '55' + phone;
     }
 
-    const pricingLabels: Record<string, string> = {
-      m2: 'Por m²',
-      empreitada: 'Empreitada',
-      diaria: 'Diária',
-      ambiente: 'Ambiente',
-      especifico: 'Específico',
-      completo: 'Mão de obra + Material'
-    };
-
     let message = `*ORÇAMENTO DE PINTURA - PINTOR PRO CALC*\n\n`;
     message += `Olá! Gostaria de solicitar uma análise para o seguinte orçamento:\n\n`;
     
@@ -99,12 +99,11 @@ export default function ResultsPage() {
       message += `💵 *Preço por m²:* ${formatCurrency(currentEstimate.pricePerM2 || 0)}\n`;
     }
     
-    message += `🖌️ *Demãos:* ${currentEstimate.coats} demãos\n`;
-    
     if (currentEstimate.productId && currentEstimate.includePaint) {
       message += `🧴 *Tinta:* ${product.name}${currentEstimate.color ? ` (Cor: ${currentEstimate.color})` : ''}\n`;
     } else {
       message += `🛠️ *Serviço:* Apenas Mão de Obra\n`;
+      message += `⚠️ *Nota:* O cliente optou por não incluir a tinta no orçamento.\n`;
     }
     
     message += `💰 *Valor Estimado:* ${formatCurrency(currentEstimate.totalCost || 0)}\n`;
@@ -124,85 +123,94 @@ export default function ResultsPage() {
   };
   
   const handleExportPDF = () => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    
-    // Header
-    doc.setFillColor(0, 45, 94); // #002D5E
-    doc.rect(0, 0, pageWidth, 40, 'F');
-    
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PINTOR PRO CALC', 20, 25);
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text('ORÇAMENTO DE PINTURA PROFISSIONAL', 20, 32);
-    
-    // Body
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('RESUMO DO PROJETO', 20, 55);
-    
-    const tableData = [
-      ['Cliente', currentEstimate.clientName || 'Não informado'],
-      ['Contato', currentEstimate.clientPhone || 'Não informado'],
-      ['Tipo de Imóvel', currentEstimate.propertyType || 'Não informado'],
-      ['Localização', `${currentEstimate.neighborhood || ''}${currentEstimate.neighborhood && currentEstimate.city ? ', ' : ''}${currentEstimate.city || ''}` || 'Não informado'],
-      ['Área Total', `${currentEstimate.area} m²`],
-      ['Número de Demãos', `${currentEstimate.coats} demãos`],
-      ['Forma de Cobrança', currentEstimate.pricingType || 'Não informado'],
-      ['Tinta Inclusa', currentEstimate.includePaint ? 'Sim' : 'Não'],
-    ];
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      
+      // Header
+      doc.setFillColor(0, 45, 94); // #002D5E
+      doc.rect(0, 0, pageWidth, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PINTOR PRO CALC', 20, 25);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('ORÇAMENTO DE PINTURA PROFISSIONAL', 20, 32);
+      
+      // Body
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RESUMO DO PROJETO', 20, 55);
+      
+      const tableData = [
+        ['Cliente', currentEstimate.clientName || 'Não informado'],
+        ['Contato', currentEstimate.clientPhone || 'Não informado'],
+        ['Tipo de Imóvel', currentEstimate.propertyType || 'Não informado'],
+        ['Localização', `${currentEstimate.neighborhood || ''}${currentEstimate.neighborhood && currentEstimate.city ? ', ' : ''}${currentEstimate.city || ''}` || 'Não informado'],
+        ['Área Total', `${currentEstimate.area} m²`],
+        ['Forma de Cobrança', currentEstimate.pricingType ? pricingLabels[currentEstimate.pricingType] : 'Não informado'],
+        ['Tinta Inclusa', currentEstimate.includePaint ? 'Sim' : 'Não'],
+      ];
 
-    if (currentEstimate.productId && currentEstimate.includePaint) {
-      tableData.push(['Produto', product.name]);
-      tableData.push(['Cor', currentEstimate.color || 'Padrão']);
-      tableData.push(['Quantidade', `${currentEstimate.packageCount} ${currentEstimate.packageSize === 'bucket' ? 'Balde(s)' : currentEstimate.packageSize === 'can' ? 'Lata(s)' : 'Litro(s)'}`]);
+      if (currentEstimate.productId && currentEstimate.includePaint) {
+        tableData.push(['Produto', product.name]);
+        tableData.push(['Cor', currentEstimate.color || 'Padrão']);
+        tableData.push(['Quantidade', `${currentEstimate.packageCount} ${currentEstimate.packageSize === 'bucket' ? 'Balde(s)' : currentEstimate.packageSize === 'can' ? 'Lata(s)' : 'Litro(s)'}`]);
+      } else {
+        tableData.push(['Observação', 'Cliente optou por não incluir a tinta no orçamento']);
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (doc as any).autoTable({
+        startY: 60,
+        head: [['Item', 'Detalhes']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [0, 45, 94] },
+        margin: { left: 20, right: 20 }
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const finalY = (doc as any).lastAutoTable.finalY + 20;
+
+      // Costs
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('INVESTIMENTO ESTIMADO', 20, finalY);
+
+      const costData = [];
+      if (currentEstimate.includePaint) {
+        costData.push(['Material', formatCurrency(currentEstimate.materialCost || 0)]);
+      }
+      costData.push(['Mão de Obra', formatCurrency(currentEstimate.laborCost || 0)]);
+      costData.push(['TOTAL', formatCurrency(currentEstimate.totalCost || 0)]);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (doc as any).autoTable({
+        startY: finalY + 5,
+        body: costData,
+        theme: 'plain',
+        styles: { fontSize: 12, fontStyle: 'bold' },
+        columnStyles: { 1: { halign: 'right' } },
+        margin: { left: 20, right: 20 }
+      });
+
+      // Footer
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text('Gerado via Pintor PRO Calc - Precisão Arquitetônica para Pintores', pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+      const fileName = `Orcamento_${(currentEstimate.clientName || 'Pintura').replace(/[^a-z0-9]/gi, '_')}.pdf`;
+      doc.save(fileName);
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      setError('Ocorreu um erro ao gerar o PDF. Por favor, tente novamente.');
     }
-
-    autoTable(doc, {
-      startY: 60,
-      head: [['Item', 'Detalhes']],
-      body: tableData,
-      theme: 'striped',
-      headStyles: { fillColor: [0, 45, 94] },
-      margin: { left: 20, right: 20 }
-    });
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const finalY = (doc as any).lastAutoTable.finalY + 20;
-
-    // Costs
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('INVESTIMENTO ESTIMADO', 20, finalY);
-
-    const costData = [];
-    if (currentEstimate.includePaint) {
-      costData.push(['Material', formatCurrency(currentEstimate.materialCost || 0)]);
-    }
-    costData.push(['Mão de Obra', formatCurrency(currentEstimate.laborCost || 0)]);
-    costData.push(['TOTAL', formatCurrency(currentEstimate.totalCost || 0)]);
-
-    autoTable(doc, {
-      startY: finalY + 5,
-      body: costData,
-      theme: 'plain',
-      styles: { fontSize: 12, fontStyle: 'bold' },
-      columnStyles: { 1: { halign: 'right' } },
-      margin: { left: 20, right: 20 }
-    });
-
-    // Footer
-    const pageHeight = doc.internal.pageSize.getHeight();
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text('Gerado via Pintor PRO Calc - Precisão Arquitetônica para Pintores', pageWidth / 2, pageHeight - 10, { align: 'center' });
-
-    doc.save(`Orcamento_${currentEstimate.clientName || 'Pintura'}.pdf`);
   };
 
   const formatCurrency = (value: number) => {
@@ -336,6 +344,20 @@ export default function ResultsPage() {
               <p className="text-[#191c1e] font-black">{formatCurrency(currentEstimate.laborCost || 0)}</p>
             </div>
           </motion.div>
+
+          {!currentEstimate.includePaint && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3"
+            >
+              <HelpCircle className="text-amber-600 w-5 h-5 shrink-0 mt-0.5" />
+              <p className="text-amber-900 text-xs font-medium leading-relaxed">
+                <span className="font-bold block mb-1">Aviso de Material:</span>
+                O cliente optou por não incluir o valor da tinta neste orçamento. O valor total reflete apenas a mão de obra.
+              </p>
+            </motion.div>
+          )}
         </div>
 
         {/* Technical Specification */}
@@ -422,10 +444,6 @@ export default function ResultsPage() {
                 <span className="text-[#191c1e] font-bold text-sm">{formatCurrency(currentEstimate.pricePerM2 || 0)}</span>
               </div>
             )}
-            <div className="flex justify-between items-center pb-2 border-b border-outline-variant/10">
-              <span className="text-on-surface-variant text-sm">Número de Demãos</span>
-              <span className="text-[#191c1e] font-bold text-sm">{currentEstimate.coats} Demãos</span>
-            </div>
             <div className="flex justify-between items-center">
               <span className="text-on-surface-variant text-sm">Tinta Inclusa</span>
               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
@@ -488,6 +506,28 @@ export default function ResultsPage() {
           </div>
         </div>
       </main>
+
+      {/* Error Toast */}
+      <AnimatePresence>
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-28 left-6 right-6 z-[100]"
+          >
+            <div className="bg-red-600 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle size={20} />
+                <p className="text-sm font-bold">{error}</p>
+              </div>
+              <button onClick={() => setError(null)} className="p-1 hover:bg-white/10 rounded-full">
+                <X size={18} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <BottomNav />
     </div>
