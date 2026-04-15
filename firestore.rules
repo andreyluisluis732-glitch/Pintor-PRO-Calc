@@ -77,7 +77,6 @@ service cloud.firestore {
 
     function isValidEstimate(data) {
       return data.keys().hasAll(['uid', 'area', 'totalCost']) &&
-             data.uid == request.auth.uid &&
              data.area is number && data.area > 0 &&
              data.totalCost is number && data.totalCost >= 0;
     }
@@ -106,7 +105,8 @@ service cloud.firestore {
 
     match /estimates/{estimateId} {
       allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid && isValidEstimate(request.resource.data);
+      allow create: if (isAuthenticated() && request.resource.data.uid == request.auth.uid && isValidEstimate(request.resource.data)) ||
+                    (request.resource.data.get('isFromClient', false) == true && isValidEstimate(request.resource.data));
       allow update: if isDocOwner() && isValidEstimate(request.resource.data) && 
                     request.resource.data.uid == resource.data.uid;
       allow delete: if isDocOwner() || isAdmin();
@@ -115,7 +115,8 @@ service cloud.firestore {
     match /appointments/{appointmentId} {
       // Appointments can be read by the professional (owner) or created by anyone (clients)
       allow read: if isDocOwner() || isAdmin();
-      allow create: if isValidAppointment(request.resource.data); 
+      allow create: if (isAuthenticated() && request.resource.data.uid == request.auth.uid && isValidAppointment(request.resource.data)) ||
+                    (request.resource.data.get('isFromClient', false) == true && isValidAppointment(request.resource.data));
       allow update: if isDocOwner() && isValidAppointment(request.resource.data) && 
                     request.resource.data.uid == resource.data.uid;
       allow delete: if isDocOwner() || isAdmin();

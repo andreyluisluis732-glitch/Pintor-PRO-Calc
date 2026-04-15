@@ -181,7 +181,15 @@ interface BeforeInstallPromptEvent extends Event {
 export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | LocalUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentEstimate, setCurrentEstimate] = useState<Partial<Estimate>>({});
+  const [currentEstimate, setCurrentEstimateState] = useState<Partial<Estimate>>(() => {
+    const saved = sessionStorage.getItem('currentEstimate');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const setCurrentEstimate = (estimate: Partial<Estimate>) => {
+    setCurrentEstimateState(estimate);
+    sessionStorage.setItem('currentEstimate', JSON.stringify(estimate));
+  };
   const [history, setHistory] = useState<Estimate[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [businessPhone, setBusinessPhoneState] = useState<string>('');
@@ -420,6 +428,8 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const saveEstimate = async (estimateData: Omit<Estimate, 'id' | 'uid'>) => {
+    const targetUid = user && !('isLocal' in user) ? user.uid : professionalUid;
+
     if (!user || ('isLocal' in user)) {
       const newEstimate: Estimate = {
         ...estimateData,
@@ -429,8 +439,23 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       const updatedHistory = [newEstimate, ...history];
       setHistory(updatedHistory);
       localStorage.setItem('guestHistory', JSON.stringify(updatedHistory));
+      
+      // If we have a professional UID, also save to their Firestore
+      if (targetUid && targetUid !== 'guest') {
+        try {
+          await addDoc(collection(db, 'estimates'), {
+            ...estimateData,
+            uid: targetUid,
+            createdAt: serverTimestamp(),
+            isFromClient: true
+          });
+        } catch (error) {
+          console.error("Error saving estimate to professional's Firestore:", error);
+        }
+      }
       return;
     }
+
     try {
       await addDoc(collection(db, 'estimates'), {
         ...estimateData,
@@ -444,6 +469,8 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const saveAppointment = async (appointmentData: Omit<Appointment, 'id' | 'uid'>) => {
+    const targetUid = user && !('isLocal' in user) ? user.uid : professionalUid;
+
     if (!user || ('isLocal' in user)) {
       const newAppointment: Appointment = {
         ...appointmentData,
@@ -453,17 +480,27 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       const updatedAppointments = [newAppointment, ...appointments];
       setAppointments(updatedAppointments);
       localStorage.setItem('guestAppointments', JSON.stringify(updatedAppointments));
+      
+      // If we have a professional UID, also save to their Firestore
+      if (targetUid && targetUid !== 'guest') {
+        try {
+          await addDoc(collection(db, 'appointments'), {
+            ...appointmentData,
+            uid: targetUid,
+            createdAt: serverTimestamp(),
+            isFromClient: true
+          });
+        } catch (error) {
+          console.error("Error saving appointment to professional's Firestore:", error);
+        }
+      }
       return;
     }
-    const targetUid = user?.uid || professionalUid;
-    if (!targetUid) {
-      console.error("No target UID for appointment");
-      return;
-    }
+
     try {
       await addDoc(collection(db, 'appointments'), {
         ...appointmentData,
-        uid: targetUid,
+        uid: targetUid || user.uid,
         createdAt: serverTimestamp()
       });
     } catch (error) {
