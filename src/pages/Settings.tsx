@@ -6,6 +6,9 @@ import { useEstimate } from '../context/EstimateContext';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const search = location.search;
+  const isClientMode = new URLSearchParams(search).get('mode') === 'client';
   const { businessPhone, defaultPrices, updateSettings, user, logout, isPro, deferredPrompt } = useEstimate();
   const [phone, setPhone] = useState(businessPhone);
   const [prices, setPrices] = useState(defaultPrices);
@@ -327,70 +330,72 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-outline-variant/10">
-            <h3 className="font-bold text-[#191c1e] mb-4 flex items-center gap-2">
-              <Crown size={18} className={isPro ? "text-yellow-500" : "text-slate-400"} />
-              {isPro ? 'Você é PRO!' : 'Seja PRO'}
-            </h3>
-            
-            {isPro ? (
-              <div className="space-y-4">
-                <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100">
-                  <p className="text-xs text-yellow-800 leading-relaxed">
-                    Parabéns! Você tem acesso a todas as funcionalidades exclusivas do Pintor PRO Calc.
-                  </p>
+          {!isClientMode && (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-outline-variant/10">
+              <h3 className="font-bold text-[#191c1e] mb-4 flex items-center gap-2">
+                <Crown size={18} className={isPro ? "text-yellow-500" : "text-slate-400"} />
+                {isPro ? 'Você é PRO!' : 'Seja PRO'}
+              </h3>
+              
+              {isPro ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100">
+                    <p className="text-xs text-yellow-800 leading-relaxed">
+                      Parabéns! Você tem acesso a todas as funcionalidades exclusivas do Pintor PRO Calc.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => updateSettings({ isPro: false })}
+                    className="w-full py-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest underline text-center"
+                  >
+                    Desativar Modo PRO (Teste)
+                  </button>
                 </div>
-                <button 
-                  onClick={() => updateSettings({ isPro: false })}
-                  className="w-full py-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest underline text-center"
-                >
-                  Desativar Modo PRO (Teste)
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-xs text-on-surface-variant leading-relaxed">
-                  Desbloqueie recursos exclusivos, remova limites e profissionalize ainda mais seus orçamentos.
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2 text-[10px] text-slate-600 font-medium">
-                    <CheckCircle2 size={14} className="text-green-500" />
-                    Histórico ilimitado de orçamentos
-                  </li>
-                  <li className="flex items-center gap-2 text-[10px] text-slate-600 font-medium">
-                    <CheckCircle2 size={14} className="text-green-500" />
-                    Sincronização em nuvem automática
-                  </li>
-                  <li className="flex items-center gap-2 text-[10px] text-slate-600 font-medium">
-                    <CheckCircle2 size={14} className="text-green-500" />
-                    Suporte prioritário
-                  </li>
-                </ul>
-                <a 
-                  href="https://pay.cakto.com.br/qim4js2_840385" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-white py-4 rounded-xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all"
-                >
-                  <Crown size={20} />
-                  Quero ser PRO agora
-                  <ExternalLink size={16} />
-                </a>
-                <button 
-                  onClick={() => updateSettings({ isPro: true })}
-                  className="w-full py-2 text-blue-600 font-bold text-[10px] uppercase tracking-widest underline text-center"
-                >
-                  Simular Ativação PRO (Teste)
-                </button>
-                <Link 
-                  to="/vendas" 
-                  className="block text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 hover:underline"
-                >
-                  Ver Detalhes da Oferta
-                </Link>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-xs text-on-surface-variant leading-relaxed">
+                    Desbloqueie recursos exclusivos, remova limites e profissionalize ainda mais seus orçamentos.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2 text-[10px] text-slate-600 font-medium">
+                      <CheckCircle2 size={14} className="text-green-500" />
+                      Histórico ilimitado de orçamentos
+                    </li>
+                    <li className="flex items-center gap-2 text-[10px] text-slate-600 font-medium">
+                      <CheckCircle2 size={14} className="text-green-500" />
+                      Sincronização em nuvem automática
+                    </li>
+                    <li className="flex items-center gap-2 text-[10px] text-slate-600 font-medium">
+                      <CheckCircle2 size={14} className="text-green-500" />
+                      Suporte prioritário
+                    </li>
+                  </ul>
+                  <a 
+                    href="https://pay.cakto.com.br/qim4js2_840385" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-white py-4 rounded-xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all"
+                  >
+                    <Crown size={20} />
+                    Quero ser PRO agora
+                    <ExternalLink size={16} />
+                  </a>
+                  <button 
+                    onClick={() => updateSettings({ isPro: true })}
+                    className="w-full py-2 text-blue-600 font-bold text-[10px] uppercase tracking-widest underline text-center"
+                  >
+                    Simular Ativação PRO (Teste)
+                  </button>
+                  <Link 
+                    to="/vendas" 
+                    className="block text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 hover:underline"
+                  >
+                    Ver Detalhes da Oferta
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="bg-white p-6 rounded-xl shadow-sm border border-outline-variant/10">
             <h3 className="font-bold text-[#191c1e] mb-4 flex items-center gap-2">

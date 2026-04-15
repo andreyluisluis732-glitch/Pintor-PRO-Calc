@@ -19,15 +19,26 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading) {
-      if (!user && !isPublicPage && !isClientAccessible) {
-        navigate('/anuncio');
-      } else if (user && !isPro && !isPublicPage && !isClientAccessible) {
-        navigate('/anuncio');
-      } else if (user && isPro && pathname === '/login') {
-        navigate('/');
+      if (isClientMode) {
+        // Prevent clients from seeing sales or ad pages
+        if (pathname === '/vendas' || pathname === '/anuncio') {
+          navigate('/' + search);
+          return;
+        }
+        if (!isClientAccessible && !isPublicPage) {
+          navigate('/' + search);
+        }
+      } else {
+        if (!user && !isPublicPage) {
+          navigate('/anuncio');
+        } else if (user && !isPro && !isPublicPage) {
+          navigate('/anuncio');
+        } else if (user && isPro && pathname === '/login') {
+          navigate('/');
+        }
       }
     }
-  }, [user, loading, isPro, pathname, navigate, isPublicPage, isClientAccessible]);
+  }, [user, loading, isPro, pathname, navigate, isPublicPage, isClientAccessible, isClientMode, search]);
 
   if (loading) {
     return (

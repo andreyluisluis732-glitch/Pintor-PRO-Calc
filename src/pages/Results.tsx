@@ -130,6 +130,7 @@ export default function ResultsPage() {
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
     
+    // Open WhatsApp immediately
     try {
       window.open(whatsappUrl, '_blank');
     } catch {
@@ -509,7 +510,7 @@ export default function ResultsPage() {
             Exportar PDF do Orçamento
           </button>
 
-          {!isPro && (
+          {!isPro && !isClientMode && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}

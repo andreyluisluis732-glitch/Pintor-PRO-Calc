@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import ClientLayout from './components/ClientLayout';
 import { useEstimate } from './context/EstimateContext';
@@ -18,6 +18,8 @@ import SupabaseTest from './pages/SupabaseTest';
 
 function AppRoutes() {
   const { isPro, loading } = useEstimate();
+  const location = useLocation();
+  const isClientMode = new URLSearchParams(location.search).get('mode') === 'client';
 
   if (loading) {
     return (
@@ -29,7 +31,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={isPro ? <Home /> : <AdPage />} />
+      <Route path="/" element={(isPro || isClientMode) ? <Home /> : <AdPage />} />
       <Route path="/calculate" element={<Calculate />} />
       <Route path="/results" element={<Results />} />
       <Route path="/catalog" element={<Catalog />} />
