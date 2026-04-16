@@ -54,13 +54,12 @@ class ErrorBoundary extends Component<Props, State> {
             </a>
           </div>
 
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-8 p-4 bg-slate-800 text-slate-100 rounded-lg text-left w-full max-w-md overflow-auto max-h-40">
-              <p className="font-mono text-xs whitespace-pre-wrap">
-                {this.state.error?.toString()}
-              </p>
-            </div>
-          )}
+          <div className="mt-8 p-4 bg-slate-800 text-slate-100 rounded-lg text-left w-full max-w-md overflow-auto max-h-40 shadow-inner">
+            <p className="font-mono text-[10px] leading-relaxed whitespace-pre-wrap opacity-90">
+              {this.state.error?.toString()}
+              {this.state.error?.stack && `\n\nStack Trace:\n${this.state.error.stack}`}
+            </p>
+          </div>
         </div>
       );
     }
