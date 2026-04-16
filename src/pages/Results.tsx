@@ -15,7 +15,7 @@ export default function ResultsPage() {
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
   const clientParam = isClientMode ? '?mode=client' : '';
-  const { currentEstimate, saveEstimate, user, businessPhone } = useEstimate();
+  const { currentEstimate, saveEstimate, user, businessPhone, isPro } = useEstimate();
 
   const product = PRODUCT_CATALOG.find(p => p.id === currentEstimate.productId) || PRODUCT_CATALOG[0];
 
