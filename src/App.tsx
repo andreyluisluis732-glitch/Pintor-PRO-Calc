@@ -47,13 +47,17 @@ function AppRoutes() {
   );
 }
 
+import ErrorBoundary from './components/ErrorBoundary';
+
 function App() {
   return (
-    <Router>
-      <ClientLayout>
-        <AppRoutes />
-      </ClientLayout>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <ClientLayout>
+          <AppRoutes />
+        </ClientLayout>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

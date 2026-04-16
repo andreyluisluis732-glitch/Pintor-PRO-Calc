@@ -182,13 +182,22 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | LocalUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentEstimate, setCurrentEstimateState] = useState<Partial<Estimate>>(() => {
-    const saved = sessionStorage.getItem('currentEstimate');
-    return saved ? JSON.parse(saved) : {};
+    try {
+      const saved = sessionStorage.getItem('currentEstimate');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      console.warn("Session storage not available or corrupted:", e);
+      return {};
+    }
   });
 
   const setCurrentEstimate = (estimate: Partial<Estimate>) => {
     setCurrentEstimateState(estimate);
-    sessionStorage.setItem('currentEstimate', JSON.stringify(estimate));
+    try {
+      sessionStorage.setItem('currentEstimate', JSON.stringify(estimate));
+    } catch (e) {
+      console.warn("Session storage write failed:", e);
+    }
   };
   const [history, setHistory] = useState<Estimate[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -278,7 +287,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Estimate));
         setHistory(data.sort((a, b) => b.date.localeCompare(a.date)));
       }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'estimates');
+        console.error('Firestore Error (Estimates): ', error);
       });
 
       const appointmentsQuery = query(collection(db, 'appointments'), where('uid', '==', user.uid));
@@ -286,7 +295,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment));
         setAppointments(data);
       }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'appointments');
+        console.error('Firestore Error (Appointments): ', error);
       });
 
       unsubSettings = onSnapshot(doc(db, 'settings', user.uid), (docSnap) => {
@@ -301,7 +310,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
           setProfessionalUid(user.uid);
         }
       }, (error) => {
-        handleFirestoreError(error, OperationType.GET, `settings/${user.uid}`);
+         console.error('Firestore Error (Settings): ', error);
       });
     } else {
       // Load local history and appointments for local users or guests

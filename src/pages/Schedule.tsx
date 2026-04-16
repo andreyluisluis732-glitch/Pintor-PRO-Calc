@@ -68,7 +68,7 @@ export default function SchedulePage() {
           message += `📦 *Material:* Por conta do cliente\n`;
         }
         
-        message += `💰 *Valor Estimado:* R$ ${currentEstimate.totalCost.toLocaleString('pt-BR')}\n\n`;
+        message += `💰 *Valor Estimado:* R$ ${(currentEstimate.totalCost || 0).toLocaleString('pt-BR')}\n\n`;
         message += `_Estarei aí para validar os detalhes e fechar o serviço!_`;
       } else {
         message += `Estarei no local para realizar a medição e passar o orçamento detalhado.`;
