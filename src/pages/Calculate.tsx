@@ -1,6 +1,6 @@
 import React, { useState, Suspense } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Ruler, Info, Palette, Tag, HelpCircle, Clock, Settings, Paintbrush, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Ruler, Info, Palette, Tag, HelpCircle, Clock, Settings, Paintbrush } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate, PropertyType, PricingType } from '../context/EstimateContext';
@@ -40,69 +40,10 @@ function CalculateContent() {
   const [fixedPrice, setFixedPrice] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>(initialProduct.category);
   const [notes, setNotes] = useState('');
-  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const categories = Array.from(new Set(PRODUCT_CATALOG.map(p => p.category)));
   const filteredProducts = PRODUCT_CATALOG.filter(p => p.category === activeCategory);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setMediaFiles(prev => [...prev, ...files]);
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setMediaFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const uploadMedia = async (): Promise<string[]> => {
-    if (mediaFiles.length === 0) return [];
-    
-    setUploading(true);
-    setError(null);
-    
-    try {
-      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-      const { storage } = await import('../lib/firebase');
-      
-      const urls: string[] = [];
-      
-      const timeout = (ms: number) => new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Tempo limite excedido")), ms)
-      );
-
-      for (const file of mediaFiles) {
-        try {
-          const storageRef = ref(storage, `estimates/${Date.now()}_${file.name}`);
-          
-          const snapshot = await Promise.race([
-            uploadBytes(storageRef, file),
-            timeout(30000)
-          ]) as { ref: { fullPath: string } };
-          
-          const url = await getDownloadURL(snapshot.ref);
-          urls.push(url);
-        } catch (fileErr) {
-          console.warn(`Falha ao enviar arquivo ${file.name}:`, fileErr);
-        }
-      }
-      
-      if (urls.length === 0 && mediaFiles.length > 0) {
-        throw new Error("Nenhum arquivo pôde ser enviado.");
-      }
-      
-      return urls;
-    } catch (err) {
-      console.error("Erro geral no upload:", err);
-      setError("O envio de arquivos falhou. Você pode continuar o orçamento sem as fotos.");
-      return [];
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const handleNext = async () => {
     if (!wallSize || parseFloat(wallSize) <= 0) {
@@ -111,10 +52,7 @@ function CalculateContent() {
     }
     
     try {
-      setUploading(true);
       setError(null);
-      
-      const mediaUrls = await uploadMedia();
       
       calculateEstimate({
         clientName,
@@ -131,7 +69,7 @@ function CalculateContent() {
         pricingType,
         pricePerM2: pricePerM2 ? parseFloat(pricePerM2) : undefined,
         fixedPrice: fixedPrice ? parseFloat(fixedPrice) : undefined,
-        mediaUrls,
+        mediaUrls: [],
         notes
       });
       
@@ -139,8 +77,6 @@ function CalculateContent() {
     } catch (err) {
       console.error("Erro ao processar orçamento:", err);
       setError("Ocorreu um erro ao processar o orçamento. Tente novamente.");
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -602,7 +538,7 @@ function CalculateContent() {
             <div className="space-y-6 pt-6 border-t border-outline-variant/10">
               <header>
                 <h3 className="text-lg font-bold text-[#191c1e]">Informações Complementares</h3>
-                <p className="text-xs text-on-surface-variant">Adicione fotos e vídeos para uma análise mais precisa.</p>
+                <p className="text-xs text-on-surface-variant">Adicione observações importantes para o orçamento.</p>
               </header>
 
               <div className="space-y-4">
@@ -618,48 +554,6 @@ function CalculateContent() {
                     onChange={(e) => setNotes(e.target.value)}
                   />
                 </div>
-
-                <div className="space-y-3">
-                  <label className="block text-xs font-bold tracking-widest uppercase text-on-surface-variant">
-                    Fotos e Vídeos da Residência
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {mediaFiles.map((file, index) => (
-                      <div key={index} className="relative aspect-square rounded-lg bg-surface-container-high overflow-hidden border border-outline-variant/20">
-                        {file.type.startsWith('image/') ? (
-                          <img 
-                            src={URL.createObjectURL(file)} 
-                            alt={`Preview ${index}`} 
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-slate-200">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase">Vídeo</span>
-                          </div>
-                        )}
-                        <button 
-                          onClick={() => removeFile(index)}
-                          className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs shadow-md"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                    <label className="aspect-square rounded-lg border-2 border-dashed border-outline-variant flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors">
-                      <input 
-                        type="file" 
-                        multiple 
-                        accept="image/*,video/*" 
-                        className="sr-only" 
-                        onChange={handleFileChange}
-                      />
-                      <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mb-1">
-                        <span className="text-2xl">+</span>
-                      </div>
-                      <span className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant">Adicionar</span>
-                    </label>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -673,54 +567,13 @@ function CalculateContent() {
             </div>
           )}
           
-          {uploading ? (
-            <div className="space-y-4">
-              <button 
-                disabled
-                className="w-full h-14 bg-slate-400 text-white font-bold rounded-md shadow-lg flex items-center justify-center gap-2 cursor-not-allowed"
-              >
-                <span className="animate-pulse">Enviando arquivos...</span>
-              </button>
-              <button 
-                onClick={() => {
-                  if (!wallSize || parseFloat(wallSize) <= 0) {
-                    setError("Por favor, insira o tamanho do imóvel antes de calcular.");
-                    return;
-                  }
-                  calculateEstimate({
-                    clientName,
-                    clientPhone,
-                    propertyType,
-                    city,
-                    neighborhood,
-                    location,
-                    includePaint,
-                    area: Number(wallSize),
-                    productId,
-                    color,
-                    packageSize,
-                    pricingType,
-                    pricePerM2: pricePerM2 ? Number(pricePerM2) : undefined,
-                    fixedPrice: fixedPrice ? Number(fixedPrice) : undefined,
-                    mediaUrls: [],
-                    notes
-                  });
-                  navigate('/results' + clientParam);
-                }}
-                className="w-full py-2 text-primary font-bold text-xs uppercase tracking-widest underline text-center"
-              >
-                Pular e ver resultado agora
-              </button>
-            </div>
-          ) : (
-            <button 
-              onClick={handleNext}
-              className="w-full h-14 bg-gradient-to-b from-primary to-primary-container text-white font-bold rounded-md shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              <span>Próximo</span>
-              <ArrowRight size={18} />
-            </button>
-          )}
+          <button 
+            onClick={handleNext}
+            className="w-full h-14 bg-gradient-to-b from-primary to-primary-container text-white font-bold rounded-md shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            <span>Próximo</span>
+            <ArrowRight size={18} />
+          </button>
           
           <p className="text-center text-[10px] text-on-surface-variant uppercase tracking-[0.2em]">
             Cálculo baseado em normas técnicas ABNT

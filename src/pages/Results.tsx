@@ -515,19 +515,35 @@ export default function ResultsPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
-              className="bg-gradient-to-br from-slate-900 to-blue-900 p-6 rounded-3xl shadow-xl relative overflow-hidden group"
+              className="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 p-6 rounded-[2rem] shadow-2xl relative overflow-hidden group border border-white/10"
             >
               <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:rotate-12 transition-transform">
                 <Crown size={80} />
               </div>
               <div className="relative z-10">
-                <h3 className="text-white font-black text-lg uppercase tracking-tighter mb-2">Quer salvar orçamentos ilimitados?</h3>
-                <p className="text-white/70 text-xs mb-6 leading-relaxed">Assine o plano PRO e tenha histórico em nuvem, suporte VIP e muito mais.</p>
+                <h3 className="text-white font-black text-lg uppercase tracking-tighter mb-4">Potencialize seu Negócio</h3>
+                
+                <div className="space-y-3 mb-6">
+                  {[
+                    "Gere links para o cliente ver online",
+                    "Orçamentos em PDF com sua marca",
+                    "Acesso ilimitado ao histórico",
+                    "Sincronização em múltiplos aparelhos"
+                  ].map((benefit, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                        <CheckCircle2 size={12} />
+                      </div>
+                      <span className="text-white/80 text-[10px] font-bold uppercase tracking-tight">{benefit}</span>
+                    </div>
+                  ))}
+                </div>
+
                 <Link 
                   to="/vendas" 
                   className="inline-flex items-center gap-2 bg-yellow-500 text-yellow-950 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all"
                 >
-                  Conhecer Plano PRO
+                  Domine o Mercado PRO
                   <ArrowRight size={14} />
                 </Link>
               </div>

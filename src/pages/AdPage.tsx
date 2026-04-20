@@ -128,6 +128,7 @@ export default function AdPage() {
             </p>
             <ul className="space-y-4">
               {[
+                "Gera links exclusivos para seus clientes verem online",
                 "Cálculos precisos de tinta e materiais",
                 "Orçamentos em PDF com sua marca",
                 "Histórico de clientes na palma da mão",
