@@ -33,6 +33,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={(isPro || isClientMode) ? <Home /> : <AdPage />} />
       <Route path="/calculate" element={<Calculate />} />
+      <Route path="/results/:estimateId" element={<Results />} />
       <Route path="/results" element={<Results />} />
       <Route path="/catalog" element={<Catalog />} />
       <Route path="/history" element={<History />} />

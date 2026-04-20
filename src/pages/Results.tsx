@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon, HelpCircle, AlertCircle, X, Crown, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon, HelpCircle, AlertCircle, X, Crown, ArrowRight, Share2, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -11,11 +11,60 @@ import { PRODUCT_CATALOG } from '../constants/catalog';
 export default function ResultsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { estimateId } = useParams();
   const [error, setError] = useState<string | null>(null);
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
   const clientParam = isClientMode ? '?mode=client' : '';
-  const { currentEstimate, saveEstimate, user, businessPhone, isPro } = useEstimate();
+  const { currentEstimate, setCurrentEstimate, saveEstimate, getEstimate, user, businessPhone, isPro } = useEstimate();
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(!!estimateId);
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  useEffect(() => {
+    if (estimateId) {
+      const loadEstimate = async () => {
+        setLoading(true);
+        try {
+          const est = await getEstimate(estimateId);
+          if (est) {
+            setCurrentEstimate(est);
+          } else {
+            setError("Orçamento não encontrado.");
+          }
+        } catch (err) {
+          setError("Erro ao carregar orçamento.");
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadEstimate();
+    }
+  }, [estimateId, getEstimate, setCurrentEstimate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Carregando Orçamento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-[#f0f2f5]">
+        <AlertCircle size={48} className="text-red-500 mb-4" />
+        <h2 className="text-xl font-bold mb-2">Ops! Ocorreu um erro</h2>
+        <p className="text-slate-500 text-sm mb-6">{error}</p>
+        <Link to={`/calculate${clientParam}`} className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg">
+          Voltar para Início
+        </Link>
+      </div>
+    );
+  }
 
   const product = PRODUCT_CATALOG.find(p => p.id === currentEstimate.productId) || PRODUCT_CATALOG[0];
 
@@ -39,36 +88,11 @@ export default function ResultsPage() {
 
   const handleSave = async () => {
     try {
-      await saveEstimate({
-        ...currentEstimate as {
-          area: number;
-          productId?: string;
-          color?: string;
-          packageSize?: 'liter' | 'can' | 'bucket';
-          pricingType?: string;
-          pricePerM2?: number;
-          fixedPrice?: number;
-          includePaint: boolean;
-          totalLiters?: number;
-          packageCount?: number;
-          materialCost?: number;
-          laborCost?: number;
-          totalCost?: number;
-          clientName?: string;
-          clientPhone?: string;
-          propertyType?: string;
-          city?: string;
-          neighborhood?: string;
-          location?: string;
-          mediaUrls?: string[];
-          notes?: string;
-        },
-        id: Math.random().toString(36).substr(2, 9),
-        title: currentEstimate.clientName 
-          ? `${currentEstimate.propertyType || 'Obra'}: ${currentEstimate.clientName}` 
-          : `${currentEstimate.propertyType || 'Projeto'} ${currentEstimate.area}m²`,
-      });
-      navigate('/history' + clientParam);
+      const savedId = await saveEstimate(currentEstimate as any);
+      if (typeof savedId === 'string') {
+        setCurrentEstimate({ ...currentEstimate, id: savedId });
+      }
+      setSaved(true);
     } catch {
       setError('Erro ao salvar orçamento. Verifique sua conexão.');
     }
@@ -477,22 +501,32 @@ export default function ResultsPage() {
 
         {/* Call to Action */}
         <div className="pt-4 space-y-4">
-          {user && (
+          {user && !currentEstimate.id && (
             <button 
               onClick={handleSave}
               className="w-full bg-surface-container-high text-on-secondary-container py-4 rounded-xl font-bold flex items-center justify-center gap-3 active:scale-95 duration-150 transition-transform"
             >
               <Bookmark size={20} />
-              Salvar Orçamento
+              {saved ? 'Orçamento Salvo' : 'Salvar Orçamento'}
+            </button>
+          )}
+
+          {isPro && !isClientMode && currentEstimate.id && (
+            <button 
+              onClick={handleCopyLink}
+              className="w-full bg-blue-50 text-blue-700 border border-blue-200 py-4 rounded-xl font-bold flex items-center justify-center gap-3 active:scale-95 duration-150 transition-transform"
+            >
+              <Copy size={20} />
+              Copiar Link para Cliente Ver Online
             </button>
           )}
           
           <button 
-            onClick={handleSendToPainter}
+            onClick={handleSendToWhatsApp}
             className="w-full bg-gradient-to-b from-[#25D366] to-[#128C7E] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg active:scale-95 duration-150 transition-transform"
           >
             <Send size={20} />
-            Enviar Orçamento para o Consultor
+            {user ? 'Enviar Orçamento para o Cliente' : 'Enviar Orçamento para o Consultor'}
           </button>
           
           <button 

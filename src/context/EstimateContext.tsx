@@ -13,6 +13,7 @@ import {
   deleteDoc, 
   doc, 
   serverTimestamp,
+  getDoc,
   getDocFromServer,
   limit
 } from 'firebase/firestore';
@@ -147,6 +148,7 @@ interface EstimateContextType {
   saveAppointment: (appointment: Omit<Appointment, 'id' | 'uid'>) => Promise<void>;
   updateAppointment: (appointment: Appointment) => Promise<void>;
   deleteAppointment: (id: string) => Promise<void>;
+  getEstimate: (id: string) => Promise<Estimate | null>;
   calculateEstimate: (data: { 
     clientName?: string; 
     clientPhone?: string;
@@ -228,6 +230,20 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     completo: 0
   });
   const [professionalUid, setProfessionalUid] = useState<string | null>(null);
+
+  // Connection Test
+  useEffect(() => {
+    async function testConnection() {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration.");
+        }
+      }
+    }
+    testConnection();
+  }, []);
 
   // Load local user on mount
   useEffect(() => {
@@ -466,15 +482,34 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      await addDoc(collection(db, 'estimates'), {
+      const docRef = await addDoc(collection(db, 'estimates'), {
         ...estimateData,
         uid: user.uid,
         createdAt: serverTimestamp()
       });
+      return docRef.id;
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'estimates');
       throw error;
     }
+  };
+
+  const getEstimate = async (id: string): Promise<Estimate | null> => {
+    // 1. Check local history
+    const local = history.find(e => e.id === id);
+    if (local) return local;
+
+    // 2. Try Firestore
+    try {
+      const docRef = doc(db, 'estimates', id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as Estimate;
+      }
+    } catch (err) {
+      console.error("Error fetching estimate:", err);
+    }
+    return null;
   };
 
   const saveAppointment = async (appointmentData: Omit<Appointment, 'id' | 'uid'>) => {
