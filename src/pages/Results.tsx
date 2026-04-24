@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon, HelpCircle, AlertCircle, X, Crown, ArrowRight, Share2, Copy } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon, HelpCircle, AlertCircle, X, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import BottomNav from '../components/BottomNav';
-import { useEstimate } from '../context/EstimateContext';
+import { useEstimate, Estimate } from '../context/EstimateContext';
 import { PRODUCT_CATALOG } from '../constants/catalog';
 
 export default function ResultsPage() {
@@ -13,13 +13,13 @@ export default function ResultsPage() {
   const location = useLocation();
   const { estimateId } = useParams();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
   const clientParam = isClientMode ? '?mode=client' : '';
   const { currentEstimate, setCurrentEstimate, saveEstimate, getEstimate, user, businessPhone, isPro } = useEstimate();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(!!estimateId);
-  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
     if (estimateId) {
@@ -29,10 +29,11 @@ export default function ResultsPage() {
           const est = await getEstimate(estimateId);
           if (est) {
             setCurrentEstimate(est);
+            setSaved(true);
           } else {
             setError("Orçamento não encontrado.");
           }
-        } catch (err) {
+        } catch {
           setError("Erro ao carregar orçamento.");
         } finally {
           setLoading(false);
@@ -41,6 +42,13 @@ export default function ResultsPage() {
       loadEstimate();
     }
   }, [estimateId, getEstimate, setCurrentEstimate]);
+
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   if (loading) {
     return (
@@ -88,26 +96,29 @@ export default function ResultsPage() {
 
   const handleSave = async () => {
     try {
-      const savedId = await saveEstimate(currentEstimate as any);
+      const savedId = await saveEstimate(currentEstimate as Estimate);
       if (typeof savedId === 'string') {
         setCurrentEstimate({ ...currentEstimate, id: savedId });
       }
       setSaved(true);
+      setSuccess('Orçamento salvo com sucesso!');
     } catch {
       setError('Erro ao salvar orçamento. Verifique sua conexão.');
     }
   };
 
-  const handleSendToPainter = () => {
-    if (!businessPhone) {
-      setError('O consultor ainda não configurou o número de WhatsApp.');
+  const handleSendToWhatsApp = () => {
+    const targetPhone = (user && currentEstimate.clientPhone) ? currentEstimate.clientPhone : businessPhone;
+    
+    if (!targetPhone) {
+      setError(user ? 'O cliente não informou o WhatsApp.' : 'O consultor ainda não configurou o número de WhatsApp.');
       return;
     }
 
     const locationParts = [currentEstimate.location, currentEstimate.neighborhood, currentEstimate.city].filter(Boolean);
     const location = locationParts.join(', ');
     
-    let phone = businessPhone.replace(/\D/g, '');
+    let phone = targetPhone.replace(/\D/g, '');
     if (phone.length >= 10 && !phone.startsWith('55')) {
       phone = '55' + phone;
     }
@@ -117,39 +128,59 @@ export default function ResultsPage() {
       return;
     }
 
-    let message = `*ORÇAMENTO DE PINTURA - PINTOR PRO CALC*\n\n`;
-    message += `Olá! Gostaria de solicitar uma análise para o seguinte orçamento:\n\n`;
+    const isProfessional = !!user;
+    let message = `━━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `🎨 *ORÇAMENTO PINTOR PRO*\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
     
-    if (currentEstimate.clientName) message += `👤 *Cliente:* ${currentEstimate.clientName}\n`;
-    if (currentEstimate.clientPhone) message += `📞 *Contato:* ${currentEstimate.clientPhone}\n`;
+    if (isProfessional) {
+      message += `Olá *${currentEstimate.clientName || 'Cliente'}*! Aqui está o resumo detalhado do orçamento solicitado:\n\n`;
+    } else {
+      message += `Olá! Acabei de gerar um orçamento pelo seu aplicativo e gostaria de uma análise profissional:\n\n`;
+    }
     
-    message += `🏠 *Tipo de Imóvel:* ${currentEstimate.propertyType || 'Não informado'}\n`;
-    message += `📍 *Local:* ${location || 'Não informado'}\n`;
-    message += `📐 *Área Total:* ${currentEstimate.area}m²\n`;
+    message += `📌 *DADOS DO PROJETO*\n`;
+    if (currentEstimate.clientName) message += `👤 Cliente: ${currentEstimate.clientName}\n`;
+    message += `🏠 Tipo: ${currentEstimate.propertyType || 'Não informado'}\n`;
+    message += `📍 Local: ${location || 'Não informado'}\n`;
+    message += `📐 Área: ${currentEstimate.area} m²\n\n`;
     
-    message += `💰 *Forma de Cobrança:* ${currentEstimate.pricingType ? pricingLabels[currentEstimate.pricingType] : 'Não informado'}\n`;
+    message += `🛠️ *DADOS DO SERVIÇO*\n`;
+    message += `💰 Cobrança: ${currentEstimate.pricingType ? pricingLabels[currentEstimate.pricingType] : 'Não informado'}\n`;
     if (currentEstimate.pricingType === 'm2') {
-      message += `💵 *Preço por m²:* ${formatCurrency(currentEstimate.pricePerM2 || 0)}\n`;
+      message += `💵 Valor/m²: ${formatCurrency(currentEstimate.pricePerM2 || 0)}\n`;
     }
     
     if (currentEstimate.productId && currentEstimate.includePaint) {
-      message += `🧴 *Tinta:* ${product.name}${currentEstimate.color ? ` (Cor: ${currentEstimate.color})` : ''}\n`;
+      message += `🧴 Produto: ${product.name}\n`;
+      if (currentEstimate.color) message += `🎨 Cor: ${currentEstimate.color}\n`;
+      message += `📦 Qtd: ${currentEstimate.packageCount} ${currentEstimate.packageSize === 'bucket' ? 'Balde(s)' : currentEstimate.packageSize === 'can' ? 'Lata(s)' : 'Litro(s)'}\n`;
     } else {
-      message += `🛠️ *Serviço:* Apenas Mão de Obra\n`;
-      message += `⚠️ *Nota:* O cliente optou por não incluir a tinta no orçamento.\n`;
+      message += `⚠️ Material: Por conta do cliente\n`;
     }
     
-    message += `💰 *Valor Estimado:* ${formatCurrency(currentEstimate.totalCost || 0)}\n`;
+    message += `\n💵 *INVESTIMENTO VALOR TOTAL*\n`;
+    message += `💎 *${formatCurrency(currentEstimate.totalCost || 0)}*\n`;
 
     if (currentEstimate.notes) {
-      message += `\n📝 *Observações:* ${currentEstimate.notes}`;
+      message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+      message += `📝 *OBSERVAÇÕES:*\n${currentEstimate.notes}\n`;
     }
 
-    if (currentEstimate.mediaUrls && currentEstimate.mediaUrls.length > 0) {
-      message += `\n\n📸 *Fotos/Vídeos do Local:*\n${currentEstimate.mediaUrls.join('\n')}`;
+    if (currentEstimate.id) {
+      const shareUrl = `${window.location.origin}/results/${currentEstimate.id}${clientParam}`;
+      message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+      message += `🔗 *VER DETALHES COMPLETOS:*\n${shareUrl}\n`;
     }
 
-    message += `\n\n_Gerado via Pintor PRO Calc_`;
+    message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+    if (isProfessional) {
+      message += `_Este é um valor estimado. Fico à disposição para validar pessoalmente e fechar o serviço!_`;
+    } else {
+      message += `_Aguardando seu retorno para agendarmos uma visita técnica!_`;
+    }
+    message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `_Gerado via Pintor PRO Calc_`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
@@ -166,6 +197,17 @@ export default function ResultsPage() {
     }
   };
   
+  const handleCopyLink = () => {
+    if (!currentEstimate.id) {
+      setError("Salve o orçamento primeiro para gerar um link exclusivo.");
+      return;
+    }
+    const shareUrl = `${window.location.origin}/results/${currentEstimate.id}${clientParam}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setSuccess("Link copiado para a área de transferência!");
+    });
+  };
+
   const handleExportPDF = () => {
     try {
       const doc = new jsPDF();
@@ -208,8 +250,7 @@ export default function ResultsPage() {
         tableData.push(['Observação', 'Cliente optou por não incluir a tinta no orçamento']);
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: 60,
         head: [['Item', 'Detalhes']],
         body: tableData,
@@ -218,8 +259,8 @@ export default function ResultsPage() {
         margin: { left: 20, right: 20 }
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const finalY = (doc as any).lastAutoTable.finalY + 20;
+      // @ts-expect-error doc.lastAutoTable is added by jspdf-autotable
+      const finalY = doc.lastAutoTable.finalY + 20;
 
       // Costs
       doc.setFontSize(14);
@@ -233,8 +274,7 @@ export default function ResultsPage() {
       costData.push(['Mão de Obra', formatCurrency(currentEstimate.laborCost || 0)]);
       costData.push(['TOTAL', formatCurrency(currentEstimate.totalCost || 0)]);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: finalY + 5,
         body: costData,
         theme: 'plain',
@@ -251,6 +291,7 @@ export default function ResultsPage() {
 
       const fileName = `Orcamento_${(currentEstimate.clientName || 'Pintura').replace(/[^a-z0-9]/gi, '_')}.pdf`;
       doc.save(fileName);
+      setSuccess('PDF gerado com sucesso!');
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       setError('Ocorreu um erro ao gerar o PDF. Por favor, tente novamente.');
@@ -544,45 +585,7 @@ export default function ResultsPage() {
             Exportar PDF do Orçamento
           </button>
 
-          {!isPro && !isClientMode && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              className="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 p-6 rounded-[2rem] shadow-2xl relative overflow-hidden group border border-white/10"
-            >
-              <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:rotate-12 transition-transform">
-                <Crown size={80} />
-              </div>
-              <div className="relative z-10">
-                <h3 className="text-white font-black text-lg uppercase tracking-tighter mb-4">Potencialize seu Negócio</h3>
-                
-                <div className="space-y-3 mb-6">
-                  {[
-                    "Gere links para o cliente ver online",
-                    "Orçamentos em PDF com sua marca",
-                    "Acesso ilimitado ao histórico",
-                    "Sincronização em múltiplos aparelhos"
-                  ].map((benefit, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
-                        <CheckCircle2 size={12} />
-                      </div>
-                      <span className="text-white/80 text-[10px] font-bold uppercase tracking-tight">{benefit}</span>
-                    </div>
-                  ))}
-                </div>
 
-                <Link 
-                  to="/vendas" 
-                  className="inline-flex items-center gap-2 bg-yellow-500 text-yellow-950 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all"
-                >
-                  Domine o Mercado PRO
-                  <ArrowRight size={14} />
-                </Link>
-              </div>
-            </motion.div>
-          )}
         </div>
 
         {/* Material Selection Insight */}
@@ -601,7 +604,7 @@ export default function ResultsPage() {
         </div>
       </main>
 
-      {/* Error Toast */}
+      {/* Error and Success Toasts */}
       <AnimatePresence>
         {error && (
           <motion.div 
@@ -616,6 +619,24 @@ export default function ResultsPage() {
                 <p className="text-sm font-bold">{error}</p>
               </div>
               <button onClick={() => setError(null)} className="p-1 hover:bg-white/10 rounded-full">
+                <X size={18} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+        {success && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-28 left-6 right-6 z-[100]"
+          >
+            <div className="bg-green-600 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 size={20} />
+                <p className="text-sm font-bold">{success}</p>
+              </div>
+              <button onClick={() => setSuccess(null)} className="p-1 hover:bg-white/10 rounded-full">
                 <X size={18} />
               </button>
             </div>

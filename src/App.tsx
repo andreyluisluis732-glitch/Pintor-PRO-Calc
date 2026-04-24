@@ -13,11 +13,12 @@ import Schedule from './pages/Schedule';
 import Help from './pages/Help';
 import Login from './pages/Login';
 import SalesPage from './pages/SalesPage';
+import Subscription from './pages/Subscription';
 import AdPage from './pages/AdPage';
 import SupabaseTest from './pages/SupabaseTest';
 
 function AppRoutes() {
-  const { isPro, loading } = useEstimate();
+  const { isPro, isSubscriptionExpired, loading, user } = useEstimate();
   const location = useLocation();
   const isClientMode = new URLSearchParams(location.search).get('mode') === 'client';
 
@@ -29,9 +30,17 @@ function AppRoutes() {
     );
   }
 
+  // Block access for expired trials/subscriptions
+  // But allow access to home (for AdPage/Login) and sales/subscription pages
+  const isPublicPage = ['/vendas', '/login', '/anuncio', '/subscription'].includes(location.pathname);
+  
+  if (isSubscriptionExpired && !isPro && !isClientMode && !isPublicPage) {
+    return <Subscription />;
+  }
+
   return (
     <Routes>
-      <Route path="/" element={(isPro || isClientMode) ? <Home /> : <AdPage />} />
+      <Route path="/" element={(user || isClientMode) ? <Home /> : <Login />} />
       <Route path="/calculate" element={<Calculate />} />
       <Route path="/results/:estimateId" element={<Results />} />
       <Route path="/results" element={<Results />} />
@@ -42,6 +51,7 @@ function AppRoutes() {
       <Route path="/help" element={<Help />} />
       <Route path="/login" element={<Login />} />
       <Route path="/vendas" element={<SalesPage />} />
+      <Route path="/subscription" element={<Subscription />} />
       <Route path="/anuncio" element={<AdPage />} />
       <Route path="/supabase-test" element={<SupabaseTest />} />
     </Routes>

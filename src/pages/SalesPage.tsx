@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
 export default function SalesPage() {
-  const checkoutUrl = "https://pay.cakto.com.br/qim4js2_840385";
+  const checkoutUrl = "/subscription";
 
   const features = [
     {
@@ -86,7 +86,7 @@ export default function SalesPage() {
             </a>
             <p className="mt-4 text-xs text-slate-400 font-medium flex items-center justify-center gap-2">
               <ShieldCheck size={14} className="text-green-500" />
-              Pagamento 100% Seguro via Cakto
+              Pagamento 100% Seguro
             </p>
           </motion.div>
         </div>

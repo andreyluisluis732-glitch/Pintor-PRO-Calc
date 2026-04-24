@@ -216,28 +216,6 @@ export default function LoginPage() {
             )}
 
           <div className="space-y-6">
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="w-full bg-white border-2 border-slate-100 text-slate-700 font-bold py-4 rounded-2xl shadow-sm hover:border-blue-100 hover:bg-blue-50/30 transition-all flex items-center justify-center gap-4 disabled:opacity-70 active:scale-[0.98]"
-            >
-              {loading ? (
-                <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-              ) : (
-                <>
-                  <Chrome className="w-6 h-6 text-blue-500" />
-                  Entrar com Google
-                </>
-              )}
-            </button>
-
-            <div className="relative flex items-center gap-4 py-2">
-              <div className="flex-1 h-px bg-slate-100"></div>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">ou e-mail</span>
-              <div className="flex-1 h-px bg-slate-100"></div>
-            </div>
-
             <motion.form 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -291,12 +269,34 @@ export default function LoginPage() {
                   <Loader2 className="w-6 h-6 animate-spin" />
                 ) : (
                   <>
-                    {isLogin ? 'Entrar' : 'Criar Conta'}
+                    {isLogin ? 'Entrar com E-mail' : 'Criar Conta com E-mail'}
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </button>
             </motion.form>
+
+            <div className="relative flex items-center gap-4 py-2">
+              <div className="flex-1 h-px bg-slate-100"></div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">ou continuar com</span>
+              <div className="flex-1 h-px bg-slate-100"></div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full bg-white border-2 border-slate-100 text-slate-700 font-bold py-4 rounded-2xl shadow-sm hover:border-blue-100 hover:bg-blue-50/30 transition-all flex items-center justify-center gap-4 disabled:opacity-70 active:scale-[0.98]"
+            >
+              {loading ? (
+                <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              ) : (
+                <>
+                  <Chrome className="w-6 h-6 text-blue-500" />
+                  Google
+                </>
+              )}
+            </button>
           </div>
 
           <div className="mt-10 pt-8 border-t border-slate-50 text-center space-y-4">

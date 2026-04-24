@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
 export default function AdPage() {
-  const checkoutUrl = "https://pay.cakto.com.br/qim4js2_840385";
+  const checkoutUrl = "/subscription";
 
   return (
     <div className="min-h-screen bg-slate-900 text-white font-sans selection:bg-blue-500/30">
@@ -72,13 +72,22 @@ export default function AdPage() {
             transition={{ delay: 0.3 }}
             className="flex flex-col items-center gap-6"
           >
-            <a 
-              href={checkoutUrl}
-              className="w-full max-w-sm bg-blue-600 text-white px-10 py-6 rounded-2xl font-black text-xl shadow-[0_0_50px_rgba(37,99,235,0.4)] hover:bg-blue-500 active:scale-95 transition-all group flex items-center justify-center gap-4"
-            >
-              QUERO SER UM PINTOR PRO
-              <ArrowRight className="group-hover:translate-x-2 transition-transform" />
-            </a>
+            <div className="flex flex-col md:flex-row gap-4 w-full max-w-2xl justify-center items-center">
+              <a 
+                href={checkoutUrl}
+                className="w-full max-w-sm bg-blue-600 text-white px-10 py-6 rounded-2xl font-black text-xl shadow-[0_0_50px_rgba(37,99,235,0.4)] hover:bg-blue-500 active:scale-95 transition-all group flex items-center justify-center gap-4"
+              >
+                QUERO SER UM PINTOR PRO
+                <ArrowRight className="group-hover:translate-x-2 transition-transform" />
+              </a>
+              <Link 
+                to="/login"
+                className="w-full max-w-sm border-2 border-white/20 text-white px-10 py-6 rounded-2xl font-black text-lg hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center gap-4"
+              >
+                JÁ TENHO CONTA
+                <ArrowRight className="opacity-50" />
+              </Link>
+            </div>
             <div className="flex items-center gap-6 text-slate-500">
               <div className="flex items-center gap-2">
                 <ShieldCheck size={16} className="text-green-500" />

@@ -49,46 +49,49 @@ export default function SchedulePage() {
     
     const formattedDate = newApp.date.split('-').reverse().join('/');
     
-    let message = '';
+    let message = `━━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `📅 *AGENDAMENTO PINTOR PRO*\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
     if (user) {
-      message = `*Pintor PRO - Agendamento Confirmado*\n\n`;
-      message += `Olá *${newApp.clientName}*, confirmo nossa consulta técnica:\n`;
-      message += `📅 *Data:* ${formattedDate}\n`;
-      message += `⏰ *Horário:* ${newApp.time}\n\n`;
+      message += `Olá *${newApp.clientName}*, confirmo nossa consulta técnica:\n\n`;
+      message += `📌 *DETALHES DO AGENDAMENTO*\n`;
+      message += `📅 Data: ${formattedDate}\n`;
+      message += `⏰ Horário: ${newApp.time}\n\n`;
 
       if (currentEstimate && currentEstimate.totalCost) {
-        message += `*--- Resumo do Orçamento ---*\n`;
-        message += `🏠 *Imóvel:* ${currentEstimate.propertyType || 'Não informado'}\n`;
-        message += `📏 *Área:* ${currentEstimate.area}m²\n`;
-        message += `🎨 *Cor:* ${currentEstimate.color || 'A definir'}\n`;
-        
-        if (currentEstimate.includePaint) {
-          message += `📦 *Material:* Incluso (${currentEstimate.packageCount} un)\n`;
-        } else {
-          message += `📦 *Material:* Por conta do cliente\n`;
-        }
-        
-        message += `💰 *Valor Estimado:* R$ ${(currentEstimate.totalCost || 0).toLocaleString('pt-BR')}\n\n`;
+        message += `📋 *RESUMO DO ORÇAMENTO*\n`;
+        message += `🏠 Imóvel: ${currentEstimate.propertyType || 'Não informado'}\n`;
+        message += `📐 Área: ${currentEstimate.area} m²\n`;
+        message += `🎨 Cor: ${currentEstimate.color || 'A definir'}\n`;
+        message += `📦 Material: ${currentEstimate.includePaint ? 'Incluso' : 'Por conta do cliente'}\n`;
+        message += `💰 Investimento: R$ ${(currentEstimate.totalCost || 0).toLocaleString('pt-BR')}\n\n`;
+        message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
         message += `_Estarei aí para validar os detalhes e fechar o serviço!_`;
       } else {
-        message += `Estarei no local para realizar a medição e passar o orçamento detalhado.`;
+        message += `_Estarei no local para realizar a medição e passar o orçamento detalhado._`;
       }
     } else {
-      message = `*Pintor PRO - Novo Agendamento de Consulta*\n\n`;
-      message += `Olá! Gostaria de agendar uma consulta técnica:\n\n`;
-      message += `👤 *Cliente:* ${newApp.clientName}\n`;
-      message += `📞 *WhatsApp:* ${newApp.clientPhone}\n`;
+      message += `Olá! Gostaria de agendar uma consulta técnica para avaliação de serviço:\n\n`;
+      message += `👤 *CLIENTE:* ${newApp.clientName}\n`;
+      message += `📞 *WHATSAPP:* ${newApp.clientPhone}\n`;
       if (newApp.clientEmail) {
-        message += `📧 *E-mail:* ${newApp.clientEmail}\n`;
+        message += `📧 *E-MAIL:* ${newApp.clientEmail}\n`;
       }
-      message += `📅 *Data:* ${formattedDate}\n`;
-      message += `⏰ *Horário:* ${newApp.time}\n`;
-      message += `📍 *Endereço:* ${newApp.clientAddress || 'Não informado'}\n\n`;
+      message += `📅 *DATA:* ${formattedDate}\n`;
+      message += `⏰ *HORÁRIO:* ${newApp.time}\n`;
+      message += `📍 *ENDEREÇO:* ${newApp.clientAddress || 'Não informado'}\n\n`;
+      
       if (newApp.notes) {
-        message += `📝 *Informações Complementares:* ${newApp.notes}\n\n`;
+        message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+        message += `📝 *OBSERVAÇÕES:*\n${newApp.notes}\n`;
       }
+      message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
       message += `_Aguardando sua confirmação!_`;
     }
+
+    message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `_Gerado via Pintor PRO Calc_`;
 
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;

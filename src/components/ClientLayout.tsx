@@ -11,7 +11,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
 
-  const publicPages = ['/login', '/vendas', '/anuncio'];
+  const publicPages = ['/', '/login', '/vendas', '/anuncio', '/subscription'];
   const clientPages = ['/', '/calculate', '/results', '/catalog', '/schedule', '/help'];
   
   const isPublicPage = publicPages.includes(pathname);
@@ -29,11 +29,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
           navigate('/' + search);
         }
       } else {
-        if (!user && !isPublicPage) {
-          navigate('/anuncio');
-        } else if (user && !isPro && !isPublicPage) {
-          navigate('/anuncio');
-        } else if (user && isPro && pathname === '/login') {
+        if (user && isPro && pathname === '/login') {
           navigate('/');
         }
       }

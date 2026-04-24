@@ -1,23 +1,31 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Play, Calculator, ClipboardList, BookOpen, Settings } from 'lucide-react';
-
-const navItems = [
-  { name: 'Início', icon: Play, href: '/' },
-  { name: 'Calcular', icon: Calculator, href: '/calculate' },
-  { name: 'Catálogo', icon: BookOpen, href: '/catalog' },
-  { name: 'Histórico', icon: ClipboardList, href: '/history' },
-  { name: 'Ajustes', icon: Settings, href: '/settings' },
-];
+import { Play, Calculator, ClipboardList, BookOpen, Settings, LogIn } from 'lucide-react';
+import { useEstimate } from '../context/EstimateContext';
 
 export default function BottomNav() {
+  const { user } = useEstimate();
   const location = useLocation();
   const pathname = location.pathname;
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
+  const isRealUser = user && !('isLocal' in user);
+
+  const navItems = [
+    { name: 'Início', icon: Play, href: '/' },
+    { name: 'Calcular', icon: Calculator, href: '/calculate' },
+    { name: 'Catálogo', icon: BookOpen, href: '/catalog' },
+    { name: 'Histórico', icon: ClipboardList, href: '/history' },
+    { name: 'Ajustes', icon: Settings, href: '/settings' },
+  ];
+
+  if (!isRealUser && !isClientMode) {
+    // Add Login if not logged in with real account
+    navItems[4] = { name: 'Entrar', icon: LogIn, href: '/login' };
+  }
 
   const filteredNavItems = isClientMode 
-    ? navItems.filter(item => !['/history', '/settings'].includes(item.href))
+    ? navItems.filter(item => !['/history', '/settings', '/login'].includes(item.href))
     : navItems;
 
   return (
@@ -27,7 +35,8 @@ export default function BottomNav() {
         const shortName = item.name === 'Início' ? 'Início' : 
                          item.name === 'Calcular' ? 'Calc' : 
                          item.name === 'Catálogo' ? 'Cat' :
-                         item.name === 'Histórico' ? 'Hist' : 'Ajustes';
+                         item.name === 'Histórico' ? 'Hist' : 
+                         item.name === 'Entrar' ? 'Login' : 'Ajustes';
 
         return (
           <Link

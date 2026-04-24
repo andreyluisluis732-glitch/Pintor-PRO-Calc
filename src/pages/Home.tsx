@@ -1,15 +1,17 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, AlertCircle, Download, Crown, CheckCircle2 } from 'lucide-react';
+import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, AlertCircle, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
 
 export default function Home() {
-  const { history, user, logout, isPro } = useEstimate();
+  const { history, user, logout, isPro, isTrial, trialDaysLeft } = useEstimate();
   const location = useLocation();
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
+  const isLocalUser = user && 'isLocal' in user;
+  const showLoginBanner = (!user || isLocalUser) && !isClientMode;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -31,12 +33,16 @@ export default function Home() {
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
                   {('isLocal' in user) ? 'Modo Local' : 'Painel Profissional'}
                 </span>
-                {isPro && (
+                {isPro ? (
                   <span className="bg-yellow-400 text-yellow-900 text-[7px] font-black px-1 py-0.5 rounded-full uppercase tracking-tighter flex items-center gap-0.5">
                     <Crown size={7} />
                     PRO
                   </span>
-                )}
+                ) : isTrial ? (
+                  <span className="bg-blue-100 text-blue-600 text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter">
+                    {trialDaysLeft} dias grátis
+                  </span>
+                ) : null}
               </div>
             )}
             {isClientMode && !user && (
@@ -73,19 +79,32 @@ export default function Home() {
         <div className="absolute inset-0 bg-architectural-grid pointer-events-none opacity-50" />
         
         <div className="max-w-md w-full z-10 space-y-8 pt-6">
-          {!user && !isClientMode && (
+          {showLoginBanner && (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start gap-3 shadow-sm"
+              className="bg-amber-50 border border-amber-200 p-5 rounded-3xl flex flex-col gap-4 shadow-sm"
             >
-              <AlertCircle className="text-amber-600 w-5 h-5 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-amber-900 font-bold text-xs mb-1">Modo Convidado Ativo</h4>
-                <p className="text-amber-800 text-[10px] leading-relaxed">
-                  Você está usando o app sem login. Seus orçamentos serão salvos apenas neste dispositivo e podem ser perdidos se você limpar o navegador.
-                </p>
+              <div className="flex items-start gap-3">
+                <AlertCircle className="text-amber-600 w-5 h-5 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-amber-900 font-bold text-xs mb-1">
+                    {isLocalUser ? 'Conta Local Ativa' : 'Modo Convidado Ativo'}
+                  </h4>
+                  <p className="text-amber-800 text-[10px] leading-relaxed">
+                    {isLocalUser 
+                      ? 'Você está usando uma conta local. Faça login para salvar seus dados na nuvem e sincronizar com outros dispositivos.' 
+                      : 'Você está usando o app sem login. Seus orçamentos serão salvos apenas neste dispositivo.'}
+                  </p>
+                </div>
               </div>
+              <Link 
+                to="/login"
+                className="w-full bg-amber-600 text-white py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-amber-700 transition-all active:scale-95"
+              >
+                {isLocalUser ? 'Sincronizar com Nuvem' : 'Fazer Login com E-mail e Senha'}
+                <ArrowRight size={14} />
+              </Link>
             </motion.div>
           )}
 
@@ -108,52 +127,6 @@ export default function Home() {
               Orçamentos de pintura em <span className="text-blue-600">segundos</span>
             </motion.h1>
           </div>
-
-          {/* PRO Banner - Feature Focused */}
-          {!isPro && !isClientMode && (
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 p-6 rounded-[2rem] shadow-2xl relative overflow-hidden group border border-white/10"
-            >
-              {/* Shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
-              
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-2xl bg-yellow-400 flex items-center justify-center text-yellow-950 shadow-lg shadow-yellow-400/20">
-                    <Crown size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-black text-sm uppercase tracking-tight leading-none mb-1">Pintor PRO Academy</h3>
-                    <p className="text-blue-300 text-[9px] font-black uppercase tracking-[0.2em] leading-none">Domine o Mercado</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 mb-6">
-                  {[
-                    "Orçamentos em PDF com sua marca",
-                    "Gera link para seu cliente ver online",
-                    "Agendamento automatizado via link",
-                    "Cálculos ilimitados na nuvem"
-                  ].map((feature, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <CheckCircle2 size={12} className="text-blue-400 shrink-0" />
-                      <span className="text-white/80 text-[10px] font-bold uppercase tracking-tight">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <Link 
-                  to="/vendas" 
-                  className="w-full bg-white text-blue-900 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-slate-100 active:scale-95 transition-all flex items-center justify-center gap-2"
-                >
-                  Fazer Upgrade Agora
-                  <ArrowRight size={14} />
-                </Link>
-              </div>
-            </motion.div>
-          )}
 
           {/* Main Action Grid */}
           <div className="grid grid-cols-2 gap-4">
@@ -244,32 +217,7 @@ export default function Home() {
               </div>
             </Link>
 
-            {!isClientMode && (
-              <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-3xl shadow-xl shadow-blue-200 flex flex-col gap-4 group relative overflow-hidden">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
-                <div className="flex items-center gap-4 relative z-10">
-                  <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-white">
-                    <Download size={24} />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-black text-lg text-white leading-tight">Baixar App no Celular</h3>
-                    <p className="text-xs text-white/70 font-medium">Instale agora para acesso instantâneo</p>
-                  </div>
-                </div>
-                <div className="space-y-3 relative z-10">
-                  <div className="p-3 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-sm">
-                    <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Passo a Passo</p>
-                    <p className="text-[11px] text-white/90 leading-relaxed">
-                      Toque nos <span className="font-bold">três pontinhos</span> (Android) ou no ícone de <span className="font-bold">compartilhar</span> (iPhone) e selecione <span className="font-bold">"Instalar Aplicativo"</span> ou <span className="font-bold">"Adicionar à Tela de Início"</span>.
-                    </p>
-                  </div>
-                  <Link to="/settings" className="w-full bg-white text-blue-700 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg">
-                    Ver Guia de Instalação
-                    <ArrowRight size={14} />
-                  </Link>
-                </div>
-              </div>
-            )}
+
           </div>
         </div>
       </main>

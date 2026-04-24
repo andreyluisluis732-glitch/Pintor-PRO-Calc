@@ -133,6 +133,9 @@ interface EstimateContextType {
   businessPhone: string;
   laborPricePerM2: number;
   isPro: boolean;
+  isTrial: boolean;
+  trialDaysLeft: number;
+  isSubscriptionExpired: boolean;
   deferredPrompt: BeforeInstallPromptEvent | null;
   defaultPrices: Record<PricingType, number>;
   setBusinessPhone: (phone: string) => Promise<void>;
@@ -206,7 +209,29 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const [businessPhone, setBusinessPhoneState] = useState<string>('');
   const [laborPricePerM2, setLaborPricePerM2] = useState<number>(20);
   const [isPro, setIsPro] = useState<boolean>(false);
+  const [trialStartDate, setTrialStartDate] = useState<number | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  // Derived Trial Logic
+  const trialDaysLeft = React.useMemo(() => {
+    if (isPro) return 7;
+    if (!trialStartDate) return 7;
+    const now = Date.now();
+    const diffTime = Math.max(0, now - trialStartDate);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, 7 - diffDays);
+  }, [isPro, trialStartDate]);
+
+  const isTrial = !isPro && trialDaysLeft > 0;
+  const isSubscriptionExpired = !isPro && trialDaysLeft <= 0 && !!user && !('isLocal' in user);
+
+  useEffect(() => {
+    if (user && !('isLocal' in user) && !isPro && !trialStartDate) {
+      // Initialize trial if not present
+      const now = Date.now();
+      setTrialStartDate(now);
+    }
+  }, [user, isPro, trialStartDate]);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -320,6 +345,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
           setBusinessPhoneState(data.businessPhone || '');
           setLaborPricePerM2(data.laborPricePerM2 || 20);
           setIsPro(!!data.isPro);
+          setTrialStartDate(data.trialStartDate || null);
           if (data.defaultPrices) {
             setDefaultPrices(prev => ({ ...prev, ...data.defaultPrices }));
           }
@@ -390,7 +416,25 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       unsubAppointments();
       unsubSettings();
     };
-  }, [user]);
+    if (user && !('isLocal' in user)) {
+      if (trialStartDate === null) {
+        // Automatically set trial start date on first sync if missing
+        const now = Date.now();
+        const saveTrial = async () => {
+          try {
+            await setDoc(doc(db, 'settings', user.uid), {
+              trialStartDate: now,
+              uid: user.uid,
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+          } catch (e) {
+            console.error("Error saving initial trial date", e);
+          }
+        };
+        saveTrial();
+      }
+    }
+  }, [user, trialStartDate]);
 
   const updateSettings = async (settings: { 
     businessPhone?: string; 
@@ -456,9 +500,10 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     const targetUid = user && !('isLocal' in user) ? user.uid : professionalUid;
 
     if (!user || ('isLocal' in user)) {
+      const id = 'local_' + Date.now();
       const newEstimate: Estimate = {
         ...estimateData,
-        id: 'local_' + Date.now(),
+        id,
         uid: user?.uid || 'guest'
       };
       const updatedHistory = [newEstimate, ...history];
@@ -478,7 +523,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
           console.error("Error saving estimate to professional's Firestore:", error);
         }
       }
-      return;
+      return id;
     }
 
     try {
@@ -668,6 +713,9 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       businessPhone,
       laborPricePerM2,
       isPro,
+      isTrial,
+      trialDaysLeft,
+      isSubscriptionExpired,
       deferredPrompt,
       defaultPrices,
       setBusinessPhone,
@@ -675,6 +723,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       logout,
       updateSettings,
       saveEstimate, 
+      getEstimate,
       saveAppointment,
       updateAppointment,
       deleteAppointment,
