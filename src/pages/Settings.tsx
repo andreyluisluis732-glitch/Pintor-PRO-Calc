@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Save, Phone, User, CheckCircle2, Share2, Copy, LogIn, HelpCircle, Download, Crown, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Phone, CheckCircle2, HelpCircle, Download, Crown, ExternalLink, Loader2 } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
 
@@ -9,11 +9,10 @@ export default function SettingsPage() {
   const location = useLocation();
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
-  const { businessPhone, defaultPrices, updateSettings, user, logout, isPro, deferredPrompt } = useEstimate();
+  const { businessPhone, defaultPrices, updateSettings, isPro, deferredPrompt } = useEstimate();
   const [phone, setPhone] = useState(businessPhone);
   const [prices, setPrices] = useState(defaultPrices);
   const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [installing, setInstalling] = useState(false);
 
   const [isEditingPhone, setIsEditingPhone] = useState(false);
@@ -74,13 +73,6 @@ export default function SettingsPage() {
     setPrices(prev => ({ ...prev, [type]: parseFloat(value) || 0 }));
   };
 
-  const handleCopyLink = () => {
-    const url = `${window.location.origin}?mode=client`;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 3000);
-  };
-
   return (
     <div className="min-h-screen bg-surface text-on-surface pb-32">
       <header className="w-full top-0 sticky z-40 bg-[#f0f2f5]/80 backdrop-blur-md border-b border-slate-200">
@@ -105,47 +97,16 @@ export default function SettingsPage() {
       <main className="px-6 py-8 space-y-8 max-w-md mx-auto">
         <section className="space-y-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-outline-variant/10">
-            <h3 className="font-bold text-[#191c1e] mb-4 flex items-center gap-2">
-              <Share2 size={18} className="text-primary" />
-              Compartilhar com Clientes
+            <h3 className="font-bold text-[#191c1e] mb-2 flex items-center gap-2 text-sm text-primary uppercase tracking-widest">
+              Sua Identificação
             </h3>
             <p className="text-xs text-on-surface-variant mb-4">
-              Envie este link para sua pagina de vendas para que seus clientes possam fazer orçamentos por conta própria.
+              Configure seu WhatsApp para que o cliente saiba quem você é.
             </p>
-            <button 
-              onClick={handleCopyLink}
-              className="w-full bg-surface-container-high text-on-secondary-container py-4 rounded-xl font-bold flex items-center justify-center gap-3 active:scale-95 duration-150 transition-all"
-            >
-              {copied ? (
-                <>
-                  <CheckCircle2 size={20} className="text-green-600" />
-                  Link Copiado!
-                </>
-              ) : (
-                <>
-                  <Copy size={20} />
-                  Copiar Link do App
-                </>
-              )}
-            </button>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-outline-variant/10">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                <User size={20} />
-              </div>
-              <div>
-                <h2 className="font-bold text-[#191c1e]">
-                  {user ? 'Perfil Profissional' : 'Modo Convidado'}
-                </h2>
-                <p className="text-xs text-on-surface-variant">
-                  {user ? user.email : 'Seus dados estão salvos localmente'}
-                </p>
-              </div>
-            </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-outline-variant/10 flex flex-col gap-6">
 
-            <div className="space-y-6">
               {/* WhatsApp Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -408,7 +369,6 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
-        </div>
 
           {!isClientMode && (
             <div className="bg-white p-6 rounded-xl shadow-sm border border-outline-variant/10">
@@ -440,10 +400,6 @@ export default function SettingsPage() {
                     <li className="flex items-center gap-2 text-[10px] text-slate-600 font-medium">
                       <CheckCircle2 size={14} className="text-green-500" />
                       Histórico ilimitado de orçamentos
-                    </li>
-                    <li className="flex items-center gap-2 text-[10px] text-slate-600 font-medium">
-                      <CheckCircle2 size={14} className="text-green-500" />
-                      Sincronização em nuvem automática
                     </li>
                     <li className="flex items-center gap-2 text-[10px] text-slate-600 font-medium">
                       <CheckCircle2 size={14} className="text-green-500" />
@@ -511,36 +467,6 @@ export default function SettingsPage() {
               Ao configurar seu número, todos os orçamentos gerados pelos clientes serão enviados diretamente para o seu WhatsApp pessoal. Isso facilita o contato imediato e o fechamento de novos serviços.
             </p>
           </div>
-
-          {user && (
-            <div className="pt-4">
-              <button 
-                onClick={async () => {
-                  await logout();
-                  navigate('/login');
-                }}
-                className="w-full bg-red-50 text-red-600 py-4 rounded-xl font-bold flex items-center justify-center gap-3 border border-red-100 active:scale-95 duration-150 transition-all"
-              >
-                <LogIn size={20} className="rotate-180" />
-                Sair da Conta {('isLocal' in user) ? 'Local' : ''}
-              </button>
-            </div>
-          )}
-
-          {!user && (
-            <div className="pt-4">
-              <button 
-                onClick={() => navigate('/login')}
-                className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg active:scale-95 duration-150 transition-all"
-              >
-                <LogIn size={20} />
-                Fazer Login para Sincronizar
-              </button>
-              <p className="text-[10px] text-center text-slate-400 mt-3 uppercase tracking-widest font-bold">
-                Salve seus dados na nuvem e acesse de qualquer lugar
-              </p>
-            </div>
-          )}
         </section>
       </main>
 

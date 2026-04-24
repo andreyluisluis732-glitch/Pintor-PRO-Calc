@@ -1,17 +1,15 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, AlertCircle, Crown, Zap } from 'lucide-react';
+import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
 
 export default function Home() {
-  const { history, user, logout, isPro, isTrial, trialDaysLeft } = useEstimate();
+  const { history, isPro, isTrial, trialDaysLeft } = useEstimate();
   const location = useLocation();
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
-  const isLocalUser = user && 'isLocal' in user;
-  const showLoginBanner = (!user || isLocalUser) && !isClientMode;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -28,24 +26,12 @@ export default function Home() {
             <div className="text-blue-600 font-black tracking-tighter text-xl italic uppercase">
               Pintor PRO Calc
             </div>
-            {user && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                  {('isLocal' in user) ? 'Modo Local' : 'Painel Profissional'}
-                </span>
-                {isPro ? (
-                  <span className="bg-yellow-400 text-yellow-900 text-[7px] font-black px-1 py-0.5 rounded-full uppercase tracking-tighter flex items-center gap-0.5">
-                    <Crown size={7} />
-                    PRO
-                  </span>
-                ) : isTrial ? (
-                  <span className="bg-blue-100 text-blue-600 text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter">
-                    {trialDaysLeft} dias grátis
-                  </span>
-                ) : null}
-              </div>
+            {isTrial && !isPro && !isClientMode && (
+              <span className="bg-blue-100 text-blue-600 text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter w-fit mt-1">
+                {trialDaysLeft} dias grátis
+              </span>
             )}
-            {isClientMode && !user && (
+            {isClientMode && (
               <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.2em]">
                 Portal do Cliente
               </span>
@@ -59,17 +45,6 @@ export default function Home() {
             >
               <HelpCircle size={18} />
             </Link>
-            {!isClientMode && (
-              <button 
-                onClick={logout}
-                className="active:scale-90 transition-all ml-1"
-                title="Sair"
-              >
-                <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-blue-200">
-                  {user?.displayName?.[0] || user?.email?.[0] || 'P'}
-                </div>
-              </button>
-            )}
           </div>
         </div>
       </header>
@@ -94,35 +69,6 @@ export default function Home() {
               </div>
               <Link to="/subscription" className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">
                 Assinar Pro
-              </Link>
-            </motion.div>
-          )}
-
-          {showLoginBanner && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-amber-50 border border-amber-200 p-5 rounded-3xl flex flex-col gap-4 shadow-sm"
-            >
-              <div className="flex items-start gap-3">
-                <AlertCircle className="text-amber-600 w-5 h-5 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-amber-900 font-bold text-xs mb-1">
-                    {isLocalUser ? 'Conta Local Ativa' : 'Modo Convidado Ativo'}
-                  </h4>
-                  <p className="text-amber-800 text-[10px] leading-relaxed">
-                    {isLocalUser 
-                      ? 'Você está usando uma conta local. Faça login para salvar seus dados na nuvem e sincronizar com outros dispositivos.' 
-                      : 'Você está usando o app sem login. Seus orçamentos serão salvos apenas neste dispositivo.'}
-                  </p>
-                </div>
-              </div>
-              <Link 
-                to="/login"
-                className="w-full bg-amber-600 text-white py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-amber-700 transition-all active:scale-95"
-              >
-                {isLocalUser ? 'Sincronizar com Nuvem' : 'Fazer Login com E-mail e Senha'}
-                <ArrowRight size={14} />
               </Link>
             </motion.div>
           )}
@@ -193,7 +139,7 @@ export default function Home() {
 
           {/* Secondary Actions */}
           <div className="space-y-4">
-            {user && !isClientMode && (
+            {!isClientMode && (
               <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
                 <div className="p-4 border-b border-slate-50 flex justify-between items-center">
                   <h3 className="font-black text-[10px] text-slate-400 uppercase tracking-[0.2em]">Últimos Orçamentos</h3>

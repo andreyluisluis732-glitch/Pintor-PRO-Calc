@@ -11,14 +11,13 @@ import History from './pages/History';
 import Settings from './pages/Settings';
 import Schedule from './pages/Schedule';
 import Help from './pages/Help';
-import Login from './pages/Login';
 import SalesPage from './pages/SalesPage';
 import Subscription from './pages/Subscription';
 import AdPage from './pages/AdPage';
 import SupabaseTest from './pages/SupabaseTest';
 
 function AppRoutes() {
-  const { isPro, isSubscriptionExpired, loading, user } = useEstimate();
+  const { isPro, isSubscriptionExpired, loading } = useEstimate();
   const location = useLocation();
   const isClientMode = new URLSearchParams(location.search).get('mode') === 'client';
 
@@ -40,7 +39,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={(user || isClientMode) ? <Home /> : <Login />} />
+      <Route path="/" element={<Home />} />
       <Route path="/calculate" element={<Calculate />} />
       <Route path="/results/:estimateId" element={<Results />} />
       <Route path="/results" element={<Results />} />
@@ -49,7 +48,6 @@ function AppRoutes() {
       <Route path="/settings" element={<Settings />} />
       <Route path="/schedule" element={<Schedule />} />
       <Route path="/help" element={<Help />} />
-      <Route path="/login" element={<Login />} />
       <Route path="/vendas" element={<SalesPage />} />
       <Route path="/subscription" element={<Subscription />} />
       <Route path="/anuncio" element={<AdPage />} />
