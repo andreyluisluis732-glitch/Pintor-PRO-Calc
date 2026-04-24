@@ -5,12 +5,12 @@ import { useEstimate } from '../context/EstimateContext';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Subscription() {
-  const { isTrial, trialDaysLeft, isSubscriptionExpired, businessPhone } = useEstimate();
+  const { isTrial, trialDaysLeft, isSubscriptionExpired } = useEstimate();
   const navigate = useNavigate();
 
   const handleSubscribe = () => {
-    const message = encodeURIComponent('Olá! Gostaria de assinar o plano PRO do Pintor PRO Calc.');
-    window.open(`https://wa.me/${businessPhone || '550000000000'}?text=${message}`, '_blank');
+    const checkoutUrl = import.meta.env.VITE_CACTU_CHECKOUT_URL || 'https://checkout.cactupay.com.br/pay/YOUR_ID_HERE';
+    window.open(checkoutUrl, '_blank');
   };
 
   return (

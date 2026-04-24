@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, AlertCircle, Crown } from 'lucide-react';
+import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, AlertCircle, Crown, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
@@ -79,6 +79,25 @@ export default function Home() {
         <div className="absolute inset-0 bg-architectural-grid pointer-events-none opacity-50" />
         
         <div className="max-w-md w-full z-10 space-y-8 pt-6">
+          {isTrial && !isPro && !isClientMode && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <Zap className="text-blue-600 w-5 h-5" />
+                <div>
+                  <h4 className="text-blue-900 font-bold text-xs uppercase tracking-tight">Período de Teste</h4>
+                  <p className="text-blue-800 text-[10px] font-medium">Você tem mais {trialDaysLeft} dias gratuitos.</p>
+                </div>
+              </div>
+              <Link to="/subscription" className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">
+                Assinar Pro
+              </Link>
+            </motion.div>
+          )}
+
           {showLoginBanner && (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}

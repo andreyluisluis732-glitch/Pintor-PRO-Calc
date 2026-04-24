@@ -209,29 +209,58 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const [businessPhone, setBusinessPhoneState] = useState<string>('');
   const [laborPricePerM2, setLaborPricePerM2] = useState<number>(20);
   const [isPro, setIsPro] = useState<boolean>(false);
-  const [trialStartDate, setTrialStartDate] = useState<number | null>(null);
+  const [trialStartDate, setTrialStartDate] = useState<number | null>(() => {
+    const saved = localStorage.getItem('trialStartDate');
+    if (saved) return Number(saved);
+    const nowLocal = Date.now();
+    localStorage.setItem('trialStartDate', String(nowLocal));
+    return nowLocal;
+  });
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60000); // Update every minute
+    return () => clearInterval(timer);
+  }, []);
 
   // Derived Trial Logic
   const trialDaysLeft = React.useMemo(() => {
     if (isPro) return 7;
+    
+    // Check trialStartDate from state
     if (!trialStartDate) return 7;
-    const now = Date.now();
+    
     const diffTime = Math.max(0, now - trialStartDate);
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(0, 7 - diffDays);
-  }, [isPro, trialStartDate]);
+  }, [isPro, trialStartDate, now]);
 
   const isTrial = !isPro && trialDaysLeft > 0;
-  const isSubscriptionExpired = !isPro && trialDaysLeft <= 0 && !!user && !('isLocal' in user);
+  const isSubscriptionExpired = !isPro && trialDaysLeft <= 0;
 
   useEffect(() => {
-    if (user && !('isLocal' in user) && !isPro && !trialStartDate) {
-      // Initialize trial if not present
-      const now = Date.now();
-      setTrialStartDate(now);
+    // If logged in, sync trial start date to Firestore if not already there
+    if (user && !('isLocal' in user) && trialStartDate) {
+      const syncTrial = async () => {
+        try {
+          const docRef = doc(db, 'settings', user.uid);
+          const docSnap = await getDoc(docRef);
+          if (!docSnap.exists() || !docSnap.data().trialStartDate) {
+            await setDoc(docRef, {
+              trialStartDate,
+              uid: user.uid,
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+          }
+        } catch (e) {
+          console.warn("Trial sync failed:", e);
+        }
+      };
+      syncTrial();
     }
-  }, [user, isPro, trialStartDate]);
+  }, [user, trialStartDate]);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -416,24 +445,6 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       unsubAppointments();
       unsubSettings();
     };
-    if (user && !('isLocal' in user)) {
-      if (trialStartDate === null) {
-        // Automatically set trial start date on first sync if missing
-        const now = Date.now();
-        const saveTrial = async () => {
-          try {
-            await setDoc(doc(db, 'settings', user.uid), {
-              trialStartDate: now,
-              uid: user.uid,
-              updatedAt: serverTimestamp()
-            }, { merge: true });
-          } catch (e) {
-            console.error("Error saving initial trial date", e);
-          }
-        };
-        saveTrial();
-      }
-    }
   }, [user, trialStartDate]);
 
   const updateSettings = async (settings: { 
