@@ -30,8 +30,8 @@ function AppRoutes() {
   }
 
   // Block access for expired trials/subscriptions
-  // But allow access to home (for AdPage/Login) and sales/subscription pages
-  const isPublicPage = ['/vendas', '/login', '/anuncio', '/subscription'].includes(location.pathname);
+  // But allow access to home (for AdPage) and sales/subscription pages
+  const isPublicPage = ['/vendas', '/anuncio', '/subscription'].includes(location.pathname);
   
   if (isSubscriptionExpired && !isPro && !isClientMode && !isPublicPage) {
     return <Subscription />;

@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Check, Crown, ShieldCheck, Zap, ArrowRight, Star } from 'lucide-react';
 import { useEstimate } from '../context/EstimateContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 export default function Subscription() {
   const { isTrial, trialDaysLeft, isSubscriptionExpired } = useEstimate();
@@ -19,15 +19,6 @@ export default function Subscription() {
       <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 pt-16 pb-32 px-6 rounded-b-[3rem] relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-10">
           <Crown size={120} className="text-white" />
-        </div>
-
-        <div className="absolute top-6 right-6 z-20">
-          <Link 
-            to="/login"
-            className="text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white transition-colors"
-          >
-            Entrar
-          </Link>
         </div>
         
         <motion.div 
@@ -110,13 +101,6 @@ export default function Subscription() {
             Assinar Agora
             <ArrowRight size={18} />
           </button>
-
-          <Link 
-            to="/login"
-            className="w-full mt-4 py-4 text-blue-600 border border-blue-200 rounded-2xl font-black text-xs uppercase tracking-widest active:bg-blue-50 transition-all flex items-center justify-center gap-2"
-          >
-            Já sou Pro? Entrar
-          </Link>
           
           <p className="text-slate-400 text-[10px] font-bold text-center mt-6 uppercase tracking-tight">
             Cancele a qualquer momento • Suporte Prioritário
