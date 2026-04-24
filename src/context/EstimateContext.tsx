@@ -430,6 +430,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
           setBusinessPhoneState(data.businessPhone || '');
           setLaborPricePerM2(data.laborPricePerM2 || 20);
           setIsPro(!!data.isPro);
+          setTrialStartDate(data.trialStartDate || null);
           if (data.defaultPrices) {
             setDefaultPrices(prev => ({ ...prev, ...data.defaultPrices }));
           }

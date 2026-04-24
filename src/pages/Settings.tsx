@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Save, Phone, CheckCircle2, HelpCircle, Download, Crown, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Phone, CheckCircle2, HelpCircle, Download, Crown, ExternalLink, Loader2, Share2, Copy } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
 
@@ -9,15 +9,23 @@ export default function SettingsPage() {
   const location = useLocation();
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
-  const { businessPhone, defaultPrices, updateSettings, isPro, deferredPrompt } = useEstimate();
+  const { businessPhone, defaultPrices, updateSettings, isPro, isTrial, deferredPrompt } = useEstimate();
   const [phone, setPhone] = useState(businessPhone);
   const [prices, setPrices] = useState(defaultPrices);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [installing, setInstalling] = useState(false);
 
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [savingPhone, setSavingPhone] = useState(false);
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}?mode=client`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+  };
 
   const handleSavePhone = async () => {
     setSavingPhone(true);
@@ -96,6 +104,34 @@ export default function SettingsPage() {
 
       <main className="px-6 py-8 space-y-8 max-w-md mx-auto">
         <section className="space-y-6">
+          {(isTrial || isPro) && (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-outline-variant/10">
+              <h3 className="font-bold text-[#191c1e] mb-4 flex items-center gap-2">
+                <Share2 size={18} className="text-primary" />
+                Compartilhar com Clientes
+              </h3>
+              <p className="text-xs text-on-surface-variant mb-4">
+                Envie este link para sua pagina de vendas para que seus clientes possam fazer orçamentos por conta própria.
+              </p>
+              <button 
+                onClick={handleCopyLink}
+                className="w-full bg-surface-container-high text-on-secondary-container py-4 rounded-xl font-bold flex items-center justify-center gap-3 active:scale-95 duration-150 transition-all border-2 border-primary/10"
+              >
+                {copied ? (
+                  <>
+                    <CheckCircle2 size={20} className="text-green-600" />
+                    Link Copiado!
+                  </>
+                ) : (
+                  <>
+                    <Copy size={20} className="text-primary" />
+                    Copiar Link do App
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
           <div className="bg-white p-6 rounded-xl shadow-sm border border-outline-variant/10">
             <h3 className="font-bold text-[#191c1e] mb-2 flex items-center gap-2 text-sm text-primary uppercase tracking-widest">
               Sua Identificação

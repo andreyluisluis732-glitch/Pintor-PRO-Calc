@@ -2,16 +2,42 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Check, Crown, ShieldCheck, Zap, ArrowRight, Star } from 'lucide-react';
 import { useEstimate } from '../context/EstimateContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function Subscription() {
   const { isTrial, trialDaysLeft, isSubscriptionExpired } = useEstimate();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isClientMode = new URLSearchParams(location.search).get('mode') === 'client';
 
   const handleSubscribe = () => {
     const checkoutUrl = import.meta.env.VITE_CACTU_CHECKOUT_URL || 'https://checkout.cactupay.com.br/pay/YOUR_ID_HERE';
     window.open(checkoutUrl, '_blank');
   };
+
+  if (isClientMode && isSubscriptionExpired) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white p-8 rounded-[2.5rem] shadow-2xl shadow-slate-200 border border-slate-100 max-w-sm w-full text-center"
+        >
+          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
+            <Zap size={40} />
+          </div>
+          <h1 className="text-xl font-black uppercase tracking-tighter text-slate-900 mb-4">Link Inativo</h1>
+          <p className="text-slate-500 text-sm font-medium leading-relaxed mb-8">
+            Este portal de orçamentos está temporariamente inativo. Por favor, entre em contato diretamente com o profissional para solicitar seu orçamento.
+          </p>
+          <div className="w-full h-px bg-slate-100 mb-6" />
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            Pintor Pro Calc
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#fcfcfc] pb-24">

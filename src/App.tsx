@@ -19,7 +19,6 @@ import SupabaseTest from './pages/SupabaseTest';
 function AppRoutes() {
   const { isPro, isSubscriptionExpired, loading } = useEstimate();
   const location = useLocation();
-  const isClientMode = new URLSearchParams(location.search).get('mode') === 'client';
 
   if (loading) {
     return (
@@ -33,7 +32,7 @@ function AppRoutes() {
   // But allow access to home (for AdPage) and sales/subscription pages
   const isPublicPage = ['/vendas', '/anuncio', '/subscription'].includes(location.pathname);
   
-  if (isSubscriptionExpired && !isPro && !isClientMode && !isPublicPage) {
+  if (isSubscriptionExpired && !isPro && !isPublicPage) {
     return <Subscription />;
   }
 
