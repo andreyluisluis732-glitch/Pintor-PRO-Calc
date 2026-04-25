@@ -85,6 +85,7 @@ interface EstimateContextType {
   isPro: boolean;
   isTrial: boolean;
   trialDaysLeft: number;
+  proDaysLeft: number;
   isSubscriptionExpired: boolean;
   deferredPrompt: BeforeInstallPromptEvent | null;
   defaultPrices: Record<PricingType, number>;
@@ -95,6 +96,7 @@ interface EstimateContextType {
     laborPricePerM2?: number;
     defaultPrices?: Record<PricingType, number>;
     isPro?: boolean;
+    subscriptionEndDate?: number;
   }) => Promise<void>;
   saveEstimate: (estimate: Omit<Estimate, 'id' | 'uid'>) => Promise<string | undefined>;
   saveAppointment: (appointment: Omit<Appointment, 'id' | 'uid'>) => Promise<void>;
@@ -158,6 +160,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const [businessPhone, setBusinessPhoneState] = useState<string>('');
   const [laborPricePerM2, setLaborPricePerM2] = useState<number>(20);
   const [isPro, setIsPro] = useState<boolean>(false);
+  const [subscriptionEndDate, setSubscriptionEndDate] = useState<number | null>(null);
   const [trialStartDate, setTrialStartDate] = useState<number | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
@@ -192,35 +195,33 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const [professionalUid, setProfessionalUid] = useState<string | null>(null);
   const [consultantData, setConsultantData] = useState<{
     isPro: boolean;
+    subscriptionEndDate: number | null;
     trialStartDate: number | null;
   } | null>(null);
 
   // Derived Trial Logic
   const trialDaysLeft = React.useMemo(() => {
-    // If we are evaluating a consultant's link
-    if (consultantData) {
-      if (consultantData.isPro) return 7;
-      if (!consultantData.trialStartDate) return 7;
-      const diffTime = Math.max(0, now - consultantData.trialStartDate);
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      return Math.max(0, 7 - diffDays);
-    }
-
-    // Default: trial logic based on user doc data
-    if (isPro) return 7;
-    if (!trialStartDate) return 7;
-    const diffTime = Math.max(0, now - trialStartDate);
+    const start = consultantData ? consultantData.trialStartDate : trialStartDate;
+    if (!start) return 7;
+    const diffTime = Math.max(0, now - start);
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(0, 7 - diffDays);
-  }, [isPro, trialStartDate, consultantData, now]);
+  }, [trialStartDate, consultantData, now]);
 
-  const isTrial = consultantData 
-    ? (!consultantData.isPro && trialDaysLeft > 0)
-    : (!isPro && trialDaysLeft > 0);
+  // Derived Pro Logic
+  const proDaysLeft = React.useMemo(() => {
+    const end = consultantData ? consultantData.subscriptionEndDate : subscriptionEndDate;
+    if (!end) return 0;
+    const diffTime = Math.max(0, end - now);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  }, [subscriptionEndDate, consultantData, now]);
+
+  const hasActiveProSubscription = proDaysLeft > 0;
+
+  const isTrial = hasActiveProSubscription ? false : (trialDaysLeft > 0);
     
-  const isSubscriptionExpired = consultantData
-    ? (!consultantData.isPro && trialDaysLeft <= 0)
-    : (!isPro && trialDaysLeft <= 0);
+  const isSubscriptionExpired = !hasActiveProSubscription && (trialDaysLeft <= 0);
 
   // Auth listener
   useEffect(() => {
@@ -272,6 +273,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
           setBusinessPhoneState(data.businessPhone || '');
           setLaborPricePerM2(data.laborPricePerM2 || 20);
           setIsPro(!!data.isPro);
+          setSubscriptionEndDate(data.subscriptionEndDate || null);
           setTrialStartDate(data.trialStartDate || null);
           if (data.defaultPrices) {
             setDefaultPrices(prev => ({ ...prev, ...data.defaultPrices }));
@@ -279,6 +281,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
           setProfessionalUid(user.uid);
           setConsultantData({
             isPro: !!data.isPro,
+            subscriptionEndDate: data.subscriptionEndDate || null,
             trialStartDate: data.trialStartDate || null
           });
         }
@@ -297,6 +300,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
           }
           setConsultantData({
             isPro: !!data.isPro,
+            subscriptionEndDate: data.subscriptionEndDate || null,
             trialStartDate: data.trialStartDate || null
           });
         }
@@ -317,6 +321,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     laborPricePerM2?: number;
     defaultPrices?: Record<PricingType, number>;
     isPro?: boolean;
+    subscriptionEndDate?: number;
   }) => {
     if (!user) return;
 
@@ -324,6 +329,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     if (settings.businessPhone !== undefined) setBusinessPhoneState(settings.businessPhone);
     if (settings.laborPricePerM2 !== undefined) setLaborPricePerM2(settings.laborPricePerM2);
     if (settings.isPro !== undefined) setIsPro(settings.isPro);
+    if (settings.subscriptionEndDate !== undefined) setSubscriptionEndDate(settings.subscriptionEndDate);
     if (settings.defaultPrices !== undefined) {
       setDefaultPrices(prev => ({ ...prev, ...settings.defaultPrices }));
     }
@@ -497,9 +503,10 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       appointments,
       businessPhone,
       laborPricePerM2,
-      isPro,
+      isPro: hasActiveProSubscription,
       isTrial,
       trialDaysLeft,
+      proDaysLeft,
       isSubscriptionExpired,
       deferredPrompt,
       defaultPrices,

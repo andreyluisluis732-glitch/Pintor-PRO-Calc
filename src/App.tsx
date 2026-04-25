@@ -40,7 +40,7 @@ function AppRoutes() {
   }
 
   // Block access for expired trials/subscriptions
-  if (isSubscriptionExpired && !isPro && !isPublicPage && !isClientMode) {
+  if (isSubscriptionExpired && !isPublicPage && !isClientMode) {
     return <Subscription />;
   }
 

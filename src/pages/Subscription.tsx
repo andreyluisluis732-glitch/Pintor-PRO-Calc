@@ -5,7 +5,7 @@ import { useEstimate } from '../context/EstimateContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function Subscription() {
-  const { isTrial, trialDaysLeft, isSubscriptionExpired } = useEstimate();
+  const { isTrial, trialDaysLeft, isSubscriptionExpired, proDaysLeft } = useEstimate();
   const navigate = useNavigate();
   const location = useLocation();
   const isClientMode = new URLSearchParams(location.search).get('mode') === 'client';
@@ -38,6 +38,8 @@ export default function Subscription() {
       </div>
     );
   }
+
+  const isPro = proDaysLeft > 0;
 
   return (
     <div className="min-h-screen bg-[#fcfcfc] pb-24">
@@ -78,14 +80,23 @@ export default function Subscription() {
             <div className="bg-red-50 border border-red-100 p-6 rounded-2xl mb-8 flex flex-col items-center gap-4 text-center">
               <Zap size={32} className="text-red-500 animate-pulse" />
               <p className="text-red-900 text-sm font-black leading-tight uppercase tracking-tight">
-                Seu período de teste grátis expirou. 
+                Sua assinatura ou teste gratuito expirou. 
                 <br />
-                <span className="text-[10px] opacity-80">Agora para usar o aplicativo é preciso fazer o pagamento do app.</span>
+                <span className="text-[10px] opacity-80">Agora para usar o aplicativo é preciso fazer o pagamento da assinatura mensal.</span>
               </p>
             </div>
           )}
 
-          {!isSubscriptionExpired && isTrial && (
+          {isPro && (
+            <div className="bg-green-50 border border-green-100 p-4 rounded-2xl mb-8 flex items-center gap-3">
+              <Crown size={20} className="text-green-600" />
+              <p className="text-green-900 text-xs font-bold leading-tight uppercase tracking-tight">
+                Sua assinatura Pro está ativa! Restam {proDaysLeft} dias.
+              </p>
+            </div>
+          )}
+
+          {!isSubscriptionExpired && !isPro && isTrial && (
             <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl mb-8 flex items-center gap-3">
               <Zap size={20} className="text-blue-600" />
               <p className="text-blue-900 text-xs font-bold leading-tight uppercase tracking-tight">
@@ -100,8 +111,9 @@ export default function Subscription() {
               <span className="text-slate-900 text-lg font-black mt-2">R$</span>
               <span className="text-slate-900 text-6xl font-black tracking-tighter">49</span>
               <span className="text-slate-400 text-lg font-bold">,90</span>
+              <span className="text-slate-400 text-sm font-bold ml-1">/mês</span>
             </div>
-            <p className="text-slate-400 text-xs font-medium uppercase mt-2">Pagamento seguro e rápido</p>
+            <p className="text-slate-400 text-xs font-medium uppercase mt-2">30 dias de acesso profissional ilimitado</p>
           </div>
 
           <div className="space-y-5 mb-10">
