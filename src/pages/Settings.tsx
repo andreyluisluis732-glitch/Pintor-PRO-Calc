@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Save, Phone, CheckCircle2, HelpCircle, Download, Crown, ExternalLink, Loader2, Share2, Copy } from 'lucide-react';
+import { ArrowLeft, Save, Phone, CheckCircle2, HelpCircle, Download, Crown, ExternalLink, Loader2, Share2, Copy, Database } from 'lucide-react';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
 
@@ -9,8 +9,9 @@ export default function SettingsPage() {
   const location = useLocation();
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
-  const { businessPhone, defaultPrices, updateSettings, isPro, isTrial, deferredPrompt } = useEstimate();
+  const { businessPhone, cpf, defaultPrices, updateSettings, isPro, isTrial, deferredPrompt, user } = useEstimate();
   const [phone, setPhone] = useState(businessPhone);
+  const [userCpf, setUserCpf] = useState(cpf || '');
   const [prices, setPrices] = useState(defaultPrices);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -21,7 +22,13 @@ export default function SettingsPage() {
   const [savingPhone, setSavingPhone] = useState(false);
 
   const handleCopyLink = () => {
-    const url = `${window.location.origin}?mode=client`;
+    // If user is logged in, include their UID
+    const consultantId = user ? user.uid : '';
+    const baseUrl = window.location.origin;
+    const url = consultantId 
+      ? `${baseUrl}?mode=client&consultant=${consultantId}` 
+      : `${baseUrl}?mode=client`;
+      
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
@@ -40,13 +47,14 @@ export default function SettingsPage() {
   useEffect(() => {
     setTimeout(() => {
       setPhone(businessPhone);
+      setUserCpf(cpf || '');
       setPrices(defaultPrices);
       // If no phone is set, start in editing mode
       if (!businessPhone) {
         setIsEditing(true);
       }
     }, 0);
-  }, [businessPhone, defaultPrices]);
+  }, [businessPhone, defaultPrices, cpf]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -210,6 +218,26 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* CPF Section */}
+              <div className="pt-6 border-t border-outline-variant/10 space-y-4">
+                <label className="block text-xs font-bold tracking-widest uppercase text-on-surface-variant">
+                  Seu CPF (Identificação Única)
+                </label>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-lg font-bold text-slate-700 tracking-tight">
+                      {userCpf ? `***.***.${userCpf.substring(userCpf.length - 5, userCpf.length - 2)}-**` : 'Não informado'}
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-slate-400">
+                    <Database size={20} />
+                  </div>
+                </div>
+                <p className="text-[9px] text-slate-400 uppercase font-bold text-center">
+                  O CPF é usado para garantir a autenticidade do seu período de teste.
+                </p>
               </div>
 
               {/* Tabela de Preços Section */}

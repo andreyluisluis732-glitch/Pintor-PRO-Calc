@@ -18,8 +18,9 @@ function CalculateContent() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { calculateEstimate, laborPricePerM2, defaultPrices } = useEstimate();
+  
   const isClientMode = searchParams.get('mode') === 'client';
-  const clientParam = isClientMode ? '?mode=client' : '';
+  const clientParam = isClientMode ? `?${searchParams.toString()}` : '';
   
   const initialProductId = searchParams.get('productId') || PRODUCT_CATALOG[2].id;
   const initialProduct = PRODUCT_CATALOG.find(p => p.id === initialProductId) || PRODUCT_CATALOG[2];

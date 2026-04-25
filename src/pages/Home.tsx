@@ -1,24 +1,184 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, Zap } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Calculator, MessageSquare, History, Ruler, Database, HelpCircle, ArrowRight, Zap, Loader2, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import BottomNav from '../components/BottomNav';
 import { useEstimate } from '../context/EstimateContext';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 export default function Home() {
-  const { history, isPro, isTrial, trialDaysLeft } = useEstimate();
+  const { history, isPro, isTrial, trialDaysLeft, user, cpf, updateSettings, loading: contextLoading } = useEstimate();
+  const [showCpfModal, setShowCpfModal] = useState(false);
+  const [tempCpf, setTempCpf] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const location = useLocation();
   const search = location.search;
-  const isClientMode = new URLSearchParams(search).get('mode') === 'client';
+
+  useEffect(() => {
+    // Check if logged in user is missing CPF
+    if (!contextLoading && user && !cpf) {
+      setShowCpfModal(true);
+    }
+  }, [user, cpf, contextLoading]);
+
+  const formatCPF = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  };
+
+  const validateCPF = (cpf: string) => {
+    const cleanCPF = cpf.replace(/\D/g, '');
+    if (cleanCPF.length !== 11) return false;
+    return true;
+  };
+
+  const checkCpfUsage = async (cpfValue: string) => {
+    const cleanCpf = cpfValue.replace(/\D/g, '');
+    try {
+      const docRef = doc(db, 'cpfs', cleanCpf);
+      const docSnap = await getDoc(docRef);
+      return docSnap.exists();
+    } catch (e) {
+      handleFirestoreError(e, OperationType.GET, `cpfs/${cleanCpf}`);
+      return false;
+    }
+  };
+
+  const handleCpfSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (!validateCPF(tempCpf)) {
+        setError('CPF inválido.');
+        setLoading(false);
+        return;
+      }
+
+      const inUse = await checkCpfUsage(tempCpf);
+      if (inUse) {
+        setError('Este CPF já está em uso.');
+        setLoading(false);
+        return;
+      }
+
+      if (user) {
+        // Save to users collection with all required fields for validation
+        await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          role: 'user',
+          cpf: tempCpf.replace(/\D/g, ''),
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp() // Only set if not existing, but merge handles it
+        }, { merge: true });
+
+        // Track CPF usage for trials
+        await setDoc(doc(db, 'cpfs', tempCpf.replace(/\D/g, '')), {
+          uid: user.uid,
+          createdAt: serverTimestamp()
+        });
+
+        // Update context settings
+        await updateSettings({ cpf: tempCpf.replace(/\D/g, '') });
+        
+        setShowCpfModal(false);
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `users/${user?.uid}`);
+      setError('Erro ao salvar CPF.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  const urlParams = new URLSearchParams(search);
+  const isClientMode = urlParams.get('mode') === 'client';
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
-  const clientParam = isClientMode ? '?mode=client' : '';
+  const clientParam = isClientMode ? search : '';
 
   return (
     <div className="min-h-screen flex flex-col pb-32 bg-[#f0f2f5]">
+      <AnimatePresence>
+        {showCpfModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 p-8 opacity-5">
+                <Database size={100} />
+              </div>
+
+              <div className="relative z-10">
+                <div className="w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-blue-200">
+                  <Database className="text-white w-8 h-8" />
+                </div>
+
+                <h3 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Finalize seu Perfil</h3>
+                <p className="text-slate-500 text-sm mb-8 leading-relaxed">
+                  Para continuar usando o app e garantir seu período de teste, informe seu CPF.
+                </p>
+
+                <form onSubmit={handleCpfSubmit} className="space-y-4">
+                  <div className="relative">
+                    <Database className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      placeholder="Seu CPF (000.000.000-00)"
+                      value={tempCpf}
+                      onChange={(e) => setTempCpf(formatCPF(e.target.value))}
+                      required
+                      maxLength={14}
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-lg"
+                    />
+                  </div>
+                  
+                  {error && (
+                    <div className="flex items-center gap-2 text-red-500 text-xs font-bold uppercase tracking-wider bg-red-50 p-3 rounded-xl border border-red-100">
+                      <AlertCircle size={14} />
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 disabled:opacity-70 mt-2"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : (
+                      <>
+                        Sim, quero continuar
+                        <ArrowRight size={20} />
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Top Navigation Bar */}
       <header className="w-full top-0 sticky z-40 bg-[#f0f2f5]/80 backdrop-blur-md border-b border-slate-200">
         <div className="flex items-center justify-between px-6 py-4 w-full max-w-md mx-auto">

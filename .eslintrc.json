@@ -1,7 +1,12 @@
 {
-  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended", "plugin:react-hooks/recommended"],
+  "extends": [
+    "eslint:recommended", 
+    "plugin:@typescript-eslint/recommended", 
+    "plugin:react-hooks/recommended",
+    "plugin:@firebase/security-rules/recommended"
+  ],
   "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint"],
+  "plugins": ["@typescript-eslint", "@firebase/security-rules"],
   "ignorePatterns": ["dist/"],
   "rules": {
     "react-hooks/exhaustive-deps": "warn"

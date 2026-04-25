@@ -1,98 +1,95 @@
 {
   "entities": {
     "User": {
-      "title": "User",
-      "description": "User profile information",
+      "title": "User Profile",
+      "description": "Professional painter profile information.",
       "type": "object",
       "properties": {
-        "uid": { "type": "string" },
+        "uid": { "type": "string", "description": "Unique Firebase Auth ID" },
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
+        "phone": { "type": "string", "description": "User business phone" },
+        "cpf": { "type": "string", "description": "Clean CPF (11 digits)" },
         "role": { "type": "string", "enum": ["user", "admin"] },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role"]
     },
     "Estimate": {
-      "title": "Estimate",
-      "description": "Painting estimate details",
+      "title": "Paint Estimate",
+      "description": "Calculated paint estimate for a client.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "uid": { "type": "string" },
-        "title": { "type": "string" },
+        "uid": { "type": "string", "description": "Owner ID" },
         "clientName": { "type": "string" },
-        "clientPhone": { "type": "string" },
-        "propertyType": { "type": "string" },
-        "city": { "type": "string" },
-        "neighborhood": { "type": "string" },
-        "location": { "type": "string" },
-        "includePaint": { "type": "boolean" },
         "area": { "type": "number" },
-        "productId": { "type": "string" },
-        "color": { "type": "string" },
-        "coats": { "type": "integer" },
-        "pricePerM2": { "type": "number" },
-        "totalLiters": { "type": "number" },
-        "packageSize": { "type": "string" },
-        "packageCount": { "type": "integer" },
-        "materialCost": { "type": "number" },
-        "laborCost": { "type": "number" },
         "totalCost": { "type": "number" },
-        "date": { "type": "string" },
-        "status": { "type": "string" },
+        "isFromClient": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "uid", "area", "totalCost"]
+      "required": ["uid", "area", "totalCost"]
     },
     "Appointment": {
-      "title": "Appointment",
-      "description": "Scheduled appointment details",
+      "title": "Client Appointment",
+      "description": "Scheduled visit or service.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "uid": { "type": "string" },
+        "uid": { "type": "string", "description": "Professional ID" },
         "clientName": { "type": "string" },
-        "clientPhone": { "type": "string" },
-        "clientEmail": { "type": "string" },
-        "clientAddress": { "type": "string" },
-        "notes": { "type": "string" },
         "date": { "type": "string" },
         "time": { "type": "string" },
-        "status": { "type": "string" },
+        "isFromClient": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "uid", "clientName", "date", "time"]
+      "required": ["uid", "clientName", "date", "time"]
     },
     "Settings": {
-      "title": "Settings",
-      "description": "Business settings for the professional",
+      "title": "User Settings",
+      "description": "Business settings and preferences.",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
         "businessPhone": { "type": "string" },
-        "updatedAt": { "type": "string", "format": "date-time" },
+        "laborPricePerM2": { "type": "number" },
+        "cpf": { "type": "string" },
+        "isPro": { "type": "boolean" },
+        "trialStartDate": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid"]
+    },
+    "CpfUsage": {
+      "title": "CPF Usage Tracking",
+      "description": "Prevents multiple trial periods.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid"]
     }
   },
   "firestore": {
-    "users/{userId}": {
+    "/users/{userId}": {
       "schema": "User",
       "description": "User profiles"
     },
-    "estimates/{estimateId}": {
+    "/estimates/{estimateId}": {
       "schema": "Estimate",
-      "description": "Painting estimates"
+      "description": "Saved estimates"
     },
-    "appointments/{appointmentId}": {
+    "/appointments/{appointmentId}": {
       "schema": "Appointment",
-      "description": "Scheduled appointments"
+      "description": "Client appointments"
     },
-    "settings/{userId}": {
+    "/settings/{userId}": {
       "schema": "Settings",
-      "description": "Business settings"
+      "description": "User business settings"
+    },
+    "/cpfs/{cpf}": {
+      "schema": "CpfUsage",
+      "description": "CPF uniqueness registry"
     }
   }
 }

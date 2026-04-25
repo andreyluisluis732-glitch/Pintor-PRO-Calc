@@ -32,7 +32,7 @@ export default function BottomNav() {
         return (
           <Link
             key={item.name}
-            to={`${item.href}${isClientMode ? '?mode=client' : ''}`}
+            to={`${item.href}${search}`}
             className={`flex flex-col items-center justify-center transition-all active:scale-90 duration-200 flex-1 min-w-0 py-2.5 rounded-xl ${
               isActive 
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/40' 

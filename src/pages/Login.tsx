@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { auth, db, firebaseConfig } from '../lib/firebase';
 import { useEstimate } from '../context/EstimateContext';
+import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -19,18 +20,87 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [cpf, setCpf] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [setupError, setSetupError] = useState(false);
-  const { loginLocally } = useEstimate();
+  const [showCpfModal, setShowCpfModal] = useState(false);
+  const [tempUser, setTempUser] = useState<{
+    uid: string;
+    email: string | null;
+    displayName: string | null;
+  } | null>(null);
+  
+  const formatCPF = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  };
+
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCpf(formatCPF(e.target.value));
+  };
+
+  const validateCPF = (cpf: string) => {
+    const cleanCPF = cpf.replace(/\D/g, '');
+    if (cleanCPF.length !== 11) return false;
+    return true;
+  };
+
+  const checkCpfUsage = async (cpfValue: string) => {
+    const cleanCpf = cpfValue.replace(/\D/g, '');
+    try {
+      const docRef = doc(db, 'cpfs', cleanCpf);
+      const docSnap = await getDoc(docRef);
+      return docSnap.exists();
+    } catch (e) {
+      handleFirestoreError(e, OperationType.GET, `cpfs/${cleanCpf}`);
+      return false;
+    }
+  };
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) navigate('/');
+    // We only auto-navigate if it's NOT a login in progress that still needs CPF check
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user && !loading) {
+        // Double check if user has a CPF in Firestore
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+             navigate('/');
+          } else if (user.providerData[0]?.providerId === 'google.com') {
+             // If Google user and no doc, they need to fill CPF modal
+             setTempUser({
+               uid: user.uid,
+               email: user.email,
+               displayName: user.displayName,
+             });
+             setShowCpfModal(true);
+          }
+        } catch (e) {
+          handleFirestoreError(e, OperationType.GET, `users/${user.uid}`);
+        }
+      }
     });
     return () => unsubscribe();
-  }, [navigate]);
+  }, [navigate, loading]);
+
+  const formatPhone = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .replace(/(-\d{4})\d+?$/, '$1');
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhone(formatPhone(e.target.value));
+  };
 
   const handleGoogleLogin = async () => {
     setError('');
@@ -43,13 +113,15 @@ export default function LoginPage() {
 
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (!userDoc.exists()) {
-        await setDoc(doc(db, 'users', user.uid), {
+        // New Google user: need CPF
+        setTempUser({
           uid: user.uid,
           email: user.email,
           displayName: user.displayName,
-          role: 'user',
-          createdAt: serverTimestamp()
         });
+        setShowCpfModal(true);
+        setLoading(false);
+        return;
       }
       navigate('/');
     } catch (err: unknown) {
@@ -76,14 +148,55 @@ export default function LoginPage() {
 
     try {
       if (isLogin) {
-        // Try local login first if it's a "local" email pattern or if user wants to bypass
-        if (email === 'local@device.com') {
-          loginLocally(name || 'Profissional');
-          navigate('/');
+        // Try local login first
+        // Removed local login check
+        
+        if (!validateCPF(cpf)) {
+          setError('CPF inválido. Use o formato 000.000.000-00');
+          setLoading(false);
           return;
         }
-        await signInWithEmailAndPassword(auth, email, password);
+
+        // 1. Sign in first (getting authentication is required to read own user doc)
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // 2. Read own user doc
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (!userDoc.exists()) {
+          setError('Dados do usuário não encontrados.');
+          await auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        const userData = userDoc.data();
+        const cleanCpfInput = cpf.replace(/\D/g, '');
+
+        if (userData.cpf !== cleanCpfInput) {
+          setError('O CPF informado não confere com o cadastrado para esta conta.');
+          await auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        // Success - navigation handled by useEffect or here
+        navigate('/');
       } else {
+        // Registration: Validate CPF
+        if (!validateCPF(cpf)) {
+          setError('CPF inválido. Use o formato 000.000.000-00');
+          setLoading(false);
+          return;
+        }
+
+        const cpfInUse = await checkCpfUsage(cpf);
+        if (cpfInUse) {
+          setError('Este CPF já foi utilizado para iniciar um período de teste de 7 dias.');
+          setLoading(false);
+          return;
+        }
+
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
@@ -93,7 +206,29 @@ export default function LoginPage() {
           uid: user.uid,
           email: user.email,
           displayName: name,
+          phone: phone.replace(/\D/g, ''),
+          cpf: cpf.replace(/\D/g, ''), // Store clean CPF
           role: 'user',
+          isTrial: true,
+          trialStartDate: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+
+        // Also create an initial settings doc with the same phone and trial info
+        await setDoc(doc(db, 'settings', user.uid), {
+          uid: user.uid,
+          businessPhone: phone.replace(/\D/g, ''),
+          cpf: cpf.replace(/\D/g, ''),
+          laborPricePerM2: 0,
+          trialStartDate: Date.now(),
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp()
+        });
+
+        // Track CPF usage for trials
+        await setDoc(doc(db, 'cpfs', cpf.replace(/\D/g, '')), {
+          uid: user.uid,
           createdAt: serverTimestamp()
         });
       }
@@ -120,14 +255,56 @@ export default function LoginPage() {
     }
   };
 
-  const handleLocalLogin = () => {
-    if (!name && !isLogin) {
-      setError('Por favor, digite seu nome.');
-      return;
+  const handleFinalizeGoogleRegistration = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tempUser) return;
+    
+    setError('');
+    setLoading(true);
+
+    try {
+      if (!validateCPF(cpf)) {
+        setError('CPF inválido.');
+        setLoading(false);
+        return;
+      }
+
+      const cpfInUse = await checkCpfUsage(cpf);
+      if (cpfInUse) {
+        setError('Este CPF já foi utilizado para iniciar um período de teste de 7 dias.');
+        setLoading(false);
+        return;
+      }
+
+      const cleanCpf = cpf.replace(/\D/g, '');
+
+      await setDoc(doc(db, 'users', tempUser.uid), {
+        uid: tempUser.uid,
+        email: tempUser.email,
+        displayName: tempUser.displayName,
+        cpf: cleanCpf,
+        role: 'user',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      // Track CPF usage for trials
+      await setDoc(doc(db, 'cpfs', cleanCpf), {
+        uid: tempUser.uid,
+        createdAt: serverTimestamp()
+      });
+      
+      setShowCpfModal(false);
+      navigate('/');
+    } catch (err: unknown) {
+      handleFirestoreError(err, OperationType.WRITE, `users/${tempUser.uid}`);
+      setError('Erro ao salvar CPF. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
-    loginLocally(name || 'Profissional');
-    navigate('/');
   };
+
+
 
   const consoleUrl = `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/providers`;
 
@@ -150,13 +327,24 @@ export default function LoginPage() {
 
           <div className="text-center mb-10">
             <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-3">
-              {isLogin ? 'Pintor PRO Calc' : 'Criar sua conta'}
+              {isLogin ? 'Pintor PRO Calc' : 'Modo Teste Grátis'}
             </h2>
-            <p className="text-slate-500 font-medium">
-              {isLogin 
-                ? 'Acesse seus orçamentos e agendamentos profissionais.' 
-                : 'Comece a gerenciar seus serviços de pintura com precisão.'}
-            </p>
+            
+            {isLogin ? (
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-4">
+                <p className="text-blue-800 text-xs font-bold uppercase tracking-wider mb-2">Plano Profissional</p>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-slate-500 line-through text-xs">R$ 97,00</span>
+                  <span className="text-blue-600 font-black text-xl">R$ 50,00</span>
+                  <span className="text-slate-500 text-xs">/mês</span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-widest">Pix ou Cartão de Crédito</p>
+              </div>
+            ) : (
+              <p className="text-slate-500 font-bold text-sm px-6 leading-relaxed">
+                É a sua primeira vez usando o Pintor PRO Calc? Entre no modo teste para obter 7 dias utilizando o app gratuito!
+              </p>
+            )}
           </div>
 
           <AnimatePresence mode="wait">
@@ -185,13 +373,44 @@ export default function LoginPage() {
                       Ativar no Console do Firebase
                       <ExternalLink size={14} />
                     </a>
-                    <button 
-                      onClick={handleLocalLogin}
-                      className="w-full py-2 text-amber-700 text-[10px] font-black uppercase tracking-widest hover:text-amber-900 transition-colors"
-                    >
-                      Entrar sem Firebase (Modo Local)
-                    </button>
                   </div>
+                </div>
+              </motion.div>
+            )}
+
+            {showCpfModal && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+              >
+                <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl">
+                  <h3 className="text-xl font-black text-slate-900 mb-2">Quase lá!</h3>
+                  <p className="text-slate-500 text-sm mb-6">
+                    Para aproveitar os 7 dias grátis, informe seu CPF. Isso evita que o mesmo usuário use várias contas.
+                  </p>
+                  <form onSubmit={handleFinalizeGoogleRegistration} className="space-y-4">
+                    <div className="relative">
+                      <Database className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="Seu CPF"
+                        value={cpf}
+                        onChange={handleCpfChange}
+                        required
+                        maxLength={14}
+                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm"
+                      />
+                    </div>
+                    {error && <p className="text-red-500 text-[10px] font-bold uppercase">{error}</p>}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                    >
+                      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Finalizar Cadastro'}
+                    </button>
+                  </form>
                 </div>
               </motion.div>
             )}
@@ -222,18 +441,58 @@ export default function LoginPage() {
               onSubmit={handleSubmit} 
               className="space-y-4"
             >
-              {!isLogin && (
+              {isLogin && (
                 <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <Database className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                   <input
                     type="text"
-                    placeholder="Nome completo"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Seu CPF (000.000.000-00)"
+                    value={cpf}
+                    onChange={handleCpfChange}
                     required
+                    maxLength={14}
                     className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
                   />
                 </div>
+              )}
+
+              {!isLogin && (
+                <>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      placeholder="Nome completo"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
+                    />
+                  </div>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                    <input
+                      type="tel"
+                      placeholder="WhatsApp / Telefone"
+                      value={phone}
+                      onChange={handlePhoneChange}
+                      required
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Database className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      placeholder="CPF (000.000.000-00)"
+                      value={cpf}
+                      onChange={handleCpfChange}
+                      required
+                      maxLength={14}
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
+                    />
+                  </div>
+                </>
               )}
 
               <div className="relative">
@@ -299,43 +558,32 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="mt-10 pt-8 border-t border-slate-50 text-center space-y-4">
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-blue-600 font-bold hover:text-blue-700 transition-colors text-sm w-full"
-            >
-              {isLogin 
-                ? 'Não tem uma conta? Cadastre-se agora' 
-                : 'Já tem uma conta? Faça o login'}
-            </button>
-
-            <Link 
-              to="/vendas"
-              className="block w-full py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-orange-200 active:scale-[0.98] transition-all"
-            >
-              Conheça o Plano PRO
-            </Link>
-
-            <Link 
-              to="/anuncio"
-              className="block w-full py-2 text-blue-600 font-bold text-[10px] uppercase tracking-widest hover:underline"
-            >
-              Ver Demonstração de Elite
-            </Link>
-
-            <div className="pt-4 border-t border-slate-50">
+            <div className="mt-10 pt-8 border-t border-slate-50 text-center space-y-6">
               <button
-                onClick={handleLocalLogin}
-                className="w-full py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                onClick={() => setIsLogin(!isLogin)}
+                className="bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 w-full active:scale-[0.98]"
               >
-                <Database size={18} />
-                Entrar no Modo Local (Sem Firebase)
+                {isLogin 
+                  ? 'Iniciar MODO TESTE (7 Dias Grátis)' 
+                  : 'Já tenho uma conta / Fazer Login'}
               </button>
-              <p className="text-[10px] text-center text-slate-400 mt-3 uppercase tracking-widest font-bold">
-                Recomendado se o Google/E-mail não estiverem configurados
-              </p>
+
+              <div className="pt-4 space-y-4">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Planos Profissionais</p>
+                <Link 
+                  to="/vendas"
+                  className="block w-full py-4 bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-orange-200 active:scale-[0.98] transition-all"
+                >
+                  Ver Assinaturas e Pagamentos
+                </Link>
+              </div>
+
+              <div className="pt-4 border-t border-slate-50">
+                <p className="text-[10px] text-center text-slate-400 mt-1 uppercase tracking-widest font-bold">
+                  Acesso Seguro • Sem Cartão de Crédito no Teste
+                </p>
+              </div>
             </div>
-          </div>
         </div>
       </motion.div>
     </div>
