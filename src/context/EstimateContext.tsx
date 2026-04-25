@@ -82,7 +82,6 @@ interface EstimateContextType {
   appointments: Appointment[];
   businessPhone: string;
   laborPricePerM2: number;
-  cpf?: string;
   isPro: boolean;
   isTrial: boolean;
   trialDaysLeft: number;
@@ -96,7 +95,6 @@ interface EstimateContextType {
     laborPricePerM2?: number;
     defaultPrices?: Record<PricingType, number>;
     isPro?: boolean;
-    cpf?: string;
   }) => Promise<void>;
   saveEstimate: (estimate: Omit<Estimate, 'id' | 'uid'>) => Promise<string | undefined>;
   saveAppointment: (appointment: Omit<Appointment, 'id' | 'uid'>) => Promise<void>;
@@ -158,7 +156,6 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const [history, setHistory] = useState<Estimate[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [businessPhone, setBusinessPhoneState] = useState<string>('');
-  const [cpf, setCpf] = useState<string>('');
   const [laborPricePerM2, setLaborPricePerM2] = useState<number>(20);
   const [isPro, setIsPro] = useState<boolean>(false);
   const [trialStartDate, setTrialStartDate] = useState<number | null>(null);
@@ -273,7 +270,6 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setBusinessPhoneState(data.businessPhone || '');
-          setCpf(data.cpf || '');
           setLaborPricePerM2(data.laborPricePerM2 || 20);
           setIsPro(!!data.isPro);
           setTrialStartDate(data.trialStartDate || null);
@@ -321,7 +317,6 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     laborPricePerM2?: number;
     defaultPrices?: Record<PricingType, number>;
     isPro?: boolean;
-    cpf?: string;
   }) => {
     if (!user) return;
 
@@ -329,7 +324,6 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     if (settings.businessPhone !== undefined) setBusinessPhoneState(settings.businessPhone);
     if (settings.laborPricePerM2 !== undefined) setLaborPricePerM2(settings.laborPricePerM2);
     if (settings.isPro !== undefined) setIsPro(settings.isPro);
-    if (settings.cpf !== undefined) setCpf(settings.cpf);
     if (settings.defaultPrices !== undefined) {
       setDefaultPrices(prev => ({ ...prev, ...settings.defaultPrices }));
     }
@@ -502,7 +496,6 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       history, 
       appointments,
       businessPhone,
-      cpf,
       laborPricePerM2,
       isPro,
       isTrial,

@@ -11,7 +11,7 @@ export default function Subscription() {
   const isClientMode = new URLSearchParams(location.search).get('mode') === 'client';
 
   const handleSubscribe = () => {
-    const checkoutUrl = import.meta.env.VITE_CACTU_CHECKOUT_URL || 'https://checkout.cactupay.com.br/pay/YOUR_ID_HERE';
+    const checkoutUrl = 'https://pay.cakto.com.br/qim4js2_840385';
     window.open(checkoutUrl, '_blank');
   };
 
@@ -75,10 +75,12 @@ export default function Subscription() {
           className="bg-white rounded-[2.5rem] p-8 shadow-2xl shadow-blue-900/10 border border-slate-100"
         >
           {isSubscriptionExpired && (
-            <div className="bg-red-50 border border-red-100 p-4 rounded-2xl mb-8 flex items-center gap-3">
-              <Zap size={20} className="text-red-500" />
-              <p className="text-red-900 text-xs font-bold leading-tight uppercase tracking-tight">
-                Seu período de teste grátis expirou. Assine agora para continuar usando!
+            <div className="bg-red-50 border border-red-100 p-6 rounded-2xl mb-8 flex flex-col items-center gap-4 text-center">
+              <Zap size={32} className="text-red-500 animate-pulse" />
+              <p className="text-red-900 text-sm font-black leading-tight uppercase tracking-tight">
+                Seu período de teste grátis expirou. 
+                <br />
+                <span className="text-[10px] opacity-80">Agora para usar o aplicativo é preciso fazer o pagamento do app.</span>
               </p>
             </div>
           )}

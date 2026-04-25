@@ -14,10 +14,11 @@ import Help from './pages/Help';
 import SalesPage from './pages/SalesPage';
 import Subscription from './pages/Subscription';
 import AdPage from './pages/AdPage';
+import LoginPage from './pages/Login';
 import SupabaseTest from './pages/SupabaseTest';
 
 function AppRoutes() {
-  const { isPro, isSubscriptionExpired, loading } = useEstimate();
+  const { isPro, isSubscriptionExpired, loading, user } = useEstimate();
   const location = useLocation();
 
   if (loading) {
@@ -28,17 +29,25 @@ function AppRoutes() {
     );
   }
 
+  // Handle redirect to login if not authenticated and not on a public page or client mode
+  const search = location.search;
+  const isClientMode = new URLSearchParams(search).get('mode') === 'client';
+  const publicPages = ['/login', '/vendas', '/anuncio', '/subscription'];
+  const isPublicPage = publicPages.includes(location.pathname);
+
+  if (!user && !isPublicPage && !isClientMode) {
+    return <LoginPage />;
+  }
+
   // Block access for expired trials/subscriptions
-  // But allow access to home (for AdPage) and sales/subscription pages
-  const isPublicPage = ['/vendas', '/anuncio', '/subscription'].includes(location.pathname);
-  
-  if (isSubscriptionExpired && !isPro && !isPublicPage) {
+  if (isSubscriptionExpired && !isPro && !isPublicPage && !isClientMode) {
     return <Subscription />;
   }
 
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/calculate" element={<Calculate />} />
       <Route path="/results/:estimateId" element={<Results />} />
       <Route path="/results" element={<Results />} />

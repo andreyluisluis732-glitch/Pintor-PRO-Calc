@@ -7,31 +7,24 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   updateProfile, 
-  GoogleAuthProvider, 
-  signInWithPopup,
   onAuthStateChanged
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User, ArrowRight, Loader2, Paintbrush, Chrome, AlertCircle, ExternalLink, Database } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Loader2, Paintbrush, AlertCircle, ExternalLink, Check } from 'lucide-react';
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [cpf, setCpf] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [setupError, setSetupError] = useState(false);
-  const [showCpfModal, setShowCpfModal] = useState(false);
-  const [tempUser, setTempUser] = useState<{
-    uid: string;
-    email: string | null;
-    displayName: string | null;
-  } | null>(null);
-  
+
   const formatCPF = (value: string) => {
     return value
       .replace(/\D/g, '')
@@ -45,45 +38,27 @@ export default function LoginPage() {
     setCpf(formatCPF(e.target.value));
   };
 
-  const validateCPF = (cpf: string) => {
-    const cleanCPF = cpf.replace(/\D/g, '');
-    if (cleanCPF.length !== 11) return false;
-    return true;
+  const validateCPF = (cpfValue: string) => {
+    const cleanCPF = cpfValue.replace(/\D/g, '');
+    return cleanCPF.length === 11;
   };
-
-  const checkCpfUsage = async (cpfValue: string) => {
-    const cleanCpf = cpfValue.replace(/\D/g, '');
-    try {
-      const docRef = doc(db, 'cpfs', cleanCpf);
-      const docSnap = await getDoc(docRef);
-      return docSnap.exists();
-    } catch (e) {
-      handleFirestoreError(e, OperationType.GET, `cpfs/${cleanCpf}`);
-      return false;
-    }
-  };
+  const [setupError, setSetupError] = useState(false);
+  
   const navigate = useNavigate();
 
   useEffect(() => {
-    // We only auto-navigate if it's NOT a login in progress that still needs CPF check
+    // Only handle auto-navigation if we have a full user record
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user && !loading) {
-        // Double check if user has a CPF in Firestore
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
              navigate('/');
-          } else if (user.providerData[0]?.providerId === 'google.com') {
-             // If Google user and no doc, they need to fill CPF modal
-             setTempUser({
-               uid: user.uid,
-               email: user.email,
-               displayName: user.displayName,
-             });
-             setShowCpfModal(true);
           }
+          // Note: We removed the auto-trigger of setShowCpfModal here 
+          // to let the user see the full login form if they prefer.
         } catch (e) {
-          handleFirestoreError(e, OperationType.GET, `users/${user.uid}`);
+          console.warn("Auth check failed:", e);
         }
       }
     });
@@ -102,44 +77,6 @@ export default function LoginPage() {
     setPhone(formatPhone(e.target.value));
   };
 
-  const handleGoogleLogin = async () => {
-    setError('');
-    setSetupError(false);
-    setLoading(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (!userDoc.exists()) {
-        // New Google user: need CPF
-        setTempUser({
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-        });
-        setShowCpfModal(true);
-        setLoading(false);
-        return;
-      }
-      navigate('/');
-    } catch (err: unknown) {
-      console.error(err);
-      const firebaseError = err as { code?: string; message?: string };
-      if (firebaseError.code === 'auth/operation-not-allowed') {
-        setSetupError(true);
-        setError('O login com Google precisa ser ativado no Console do Firebase.');
-      } else if (firebaseError.code === 'auth/unauthorized-domain') {
-        setError('Este domínio não está autorizado no Firebase. Adicione o domínio do app nas configurações de Autenticação.');
-      } else {
-        setError(`Erro: ${firebaseError.code || 'Falha ao entrar com Google'}. Verifique o console.`);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -148,20 +85,11 @@ export default function LoginPage() {
 
     try {
       if (isLogin) {
-        // Try local login first
-        // Removed local login check
-        
-        if (!validateCPF(cpf)) {
-          setError('CPF inválido. Use o formato 000.000.000-00');
-          setLoading(false);
-          return;
-        }
-
-        // 1. Sign in first (getting authentication is required to read own user doc)
+        // 1. Sign in
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // 2. Read own user doc
+        // Check if user exists in our database
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (!userDoc.exists()) {
           setError('Dados do usuário não encontrados.');
@@ -170,29 +98,30 @@ export default function LoginPage() {
           return;
         }
 
-        const userData = userDoc.data();
-        const cleanCpfInput = cpf.replace(/\D/g, '');
-
-        if (userData.cpf !== cleanCpfInput) {
-          setError('O CPF informado não confere com o cadastrado para esta conta.');
-          await auth.signOut();
-          setLoading(false);
-          return;
-        }
-
-        // Success - navigation handled by useEffect or here
+        // Success
         navigate('/');
       } else {
-        // Registration: Validate CPF
-        if (!validateCPF(cpf)) {
-          setError('CPF inválido. Use o formato 000.000.000-00');
+        // Registration validations
+        if (!name || name.trim().length < 3) {
+          setError('Informe seu nome completo.');
           setLoading(false);
           return;
         }
 
-        const cpfInUse = await checkCpfUsage(cpf);
-        if (cpfInUse) {
-          setError('Este CPF já foi utilizado para iniciar um período de teste de 7 dias.');
+        if (!validateCPF(cpf)) {
+          setError('CPF inválido.');
+          setLoading(false);
+          return;
+        }
+
+        if (password !== confirmPassword) {
+          setError('As senhas não conferem.');
+          setLoading(false);
+          return;
+        }
+
+        if (!termsAccepted) {
+          setError('Você precisa aceitar os termos de uso.');
           setLoading(false);
           return;
         }
@@ -206,8 +135,7 @@ export default function LoginPage() {
           uid: user.uid,
           email: user.email,
           displayName: name,
-          phone: phone.replace(/\D/g, ''),
-          cpf: cpf.replace(/\D/g, ''), // Store clean CPF
+          cpf: cpf.replace(/\D/g, ''),
           role: 'user',
           isTrial: true,
           trialStartDate: serverTimestamp(),
@@ -215,20 +143,14 @@ export default function LoginPage() {
           updatedAt: serverTimestamp()
         });
 
-        // Also create an initial settings doc with the same phone and trial info
+        // Also create an initial settings doc with basic info
         await setDoc(doc(db, 'settings', user.uid), {
           uid: user.uid,
-          businessPhone: phone.replace(/\D/g, ''),
+          businessPhone: '',
           cpf: cpf.replace(/\D/g, ''),
           laborPricePerM2: 0,
           trialStartDate: Date.now(),
           updatedAt: serverTimestamp(),
-          createdAt: serverTimestamp()
-        });
-
-        // Track CPF usage for trials
-        await setDoc(doc(db, 'cpfs', cpf.replace(/\D/g, '')), {
-          uid: user.uid,
           createdAt: serverTimestamp()
         });
       }
@@ -255,57 +177,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleFinalizeGoogleRegistration = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!tempUser) return;
-    
-    setError('');
-    setLoading(true);
-
-    try {
-      if (!validateCPF(cpf)) {
-        setError('CPF inválido.');
-        setLoading(false);
-        return;
-      }
-
-      const cpfInUse = await checkCpfUsage(cpf);
-      if (cpfInUse) {
-        setError('Este CPF já foi utilizado para iniciar um período de teste de 7 dias.');
-        setLoading(false);
-        return;
-      }
-
-      const cleanCpf = cpf.replace(/\D/g, '');
-
-      await setDoc(doc(db, 'users', tempUser.uid), {
-        uid: tempUser.uid,
-        email: tempUser.email,
-        displayName: tempUser.displayName,
-        cpf: cleanCpf,
-        role: 'user',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-
-      // Track CPF usage for trials
-      await setDoc(doc(db, 'cpfs', cleanCpf), {
-        uid: tempUser.uid,
-        createdAt: serverTimestamp()
-      });
-      
-      setShowCpfModal(false);
-      navigate('/');
-    } catch (err: unknown) {
-      handleFirestoreError(err, OperationType.WRITE, `users/${tempUser.uid}`);
-      setError('Erro ao salvar CPF. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-
   const consoleUrl = `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/providers`;
 
   return (
@@ -327,23 +198,19 @@ export default function LoginPage() {
 
           <div className="text-center mb-10">
             <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-3">
-              {isLogin ? 'Pintor PRO Calc' : 'Modo Teste Grátis'}
+              {isLogin ? 'Login Profissional' : 'Modo Teste Grátis'}
             </h2>
             
             {isLogin ? (
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-4">
-                <p className="text-blue-800 text-xs font-bold uppercase tracking-wider mb-2">Plano Profissional</p>
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-slate-500 line-through text-xs">R$ 97,00</span>
-                  <span className="text-blue-600 font-black text-xl">R$ 50,00</span>
-                  <span className="text-slate-500 text-xs">/mês</span>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-widest">Pix ou Cartão de Crédito</p>
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-4 text-center">
+                <p className="text-blue-800 text-xs font-bold uppercase tracking-wider mb-2">Acesso do Profissional</p>
+                <p className="text-slate-600 text-sm font-medium italic">"A excelência na pintura começa com um bom orçamento."</p>
               </div>
             ) : (
-              <p className="text-slate-500 font-bold text-sm px-6 leading-relaxed">
-                É a sua primeira vez usando o Pintor PRO Calc? Entre no modo teste para obter 7 dias utilizando o app gratuito!
-              </p>
+              <div className="bg-green-50 border border-green-100 rounded-2xl p-4 mb-4 text-center">
+                <p className="text-green-800 text-xs font-bold uppercase tracking-wider mb-2">7 Dias Totalmente Grátis</p>
+                <p className="text-slate-600 text-sm font-medium">Cadastre-se para iniciar seu período de testes.</p>
+              </div>
             )}
           </div>
 
@@ -377,43 +244,6 @@ export default function LoginPage() {
                 </div>
               </motion.div>
             )}
-
-            {showCpfModal && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-              >
-                <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl">
-                  <h3 className="text-xl font-black text-slate-900 mb-2">Quase lá!</h3>
-                  <p className="text-slate-500 text-sm mb-6">
-                    Para aproveitar os 7 dias grátis, informe seu CPF. Isso evita que o mesmo usuário use várias contas.
-                  </p>
-                  <form onSubmit={handleFinalizeGoogleRegistration} className="space-y-4">
-                    <div className="relative">
-                      <Database className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                      <input
-                        type="text"
-                        placeholder="Seu CPF"
-                        value={cpf}
-                        onChange={handleCpfChange}
-                        required
-                        maxLength={14}
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-sm"
-                      />
-                    </div>
-                    {error && <p className="text-red-500 text-[10px] font-bold uppercase">{error}</p>}
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
-                    >
-                      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Finalizar Cadastro'}
-                    </button>
-                  </form>
-                </div>
-              </motion.div>
-            )}
           </AnimatePresence>
 
             {error && !setupError && (
@@ -441,65 +271,11 @@ export default function LoginPage() {
               onSubmit={handleSubmit} 
               className="space-y-4"
             >
-              {isLogin && (
-                <div className="relative">
-                  <Database className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    placeholder="Seu CPF (000.000.000-00)"
-                    value={cpf}
-                    onChange={handleCpfChange}
-                    required
-                    maxLength={14}
-                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
-                  />
-                </div>
-              )}
-
-              {!isLogin && (
-                <>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      placeholder="Nome completo"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
-                    />
-                  </div>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                    <input
-                      type="tel"
-                      placeholder="WhatsApp / Telefone"
-                      value={phone}
-                      onChange={handlePhoneChange}
-                      required
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
-                    />
-                  </div>
-                  <div className="relative">
-                    <Database className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      placeholder="CPF (000.000.000-00)"
-                      value={cpf}
-                      onChange={handleCpfChange}
-                      required
-                      maxLength={14}
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
-                    />
-                  </div>
-                </>
-              )}
-
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                 <input
                   type="email"
-                  placeholder="E-mail"
+                  placeholder="Seu E-mail"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -511,13 +287,71 @@ export default function LoginPage() {
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                 <input
                   type="password"
-                  placeholder="Senha"
+                  placeholder={isLogin ? "Sua Senha" : "Crie uma senha"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
                 />
               </div>
+
+              {!isLogin && (
+                <>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                    <input
+                      type="password"
+                      placeholder="Confirmar a senha"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      placeholder="Nome completo"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                    <input
+                      type="text"
+                      placeholder="Seu CPF"
+                      value={cpf}
+                      onChange={handleCpfChange}
+                      required
+                      maxLength={14}
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
+                    />
+                  </div>
+
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <label className="flex items-start gap-3 cursor-pointer group">
+                      <div className="relative flex items-center justify-center mt-1">
+                        <input
+                          type="checkbox"
+                          checked={termsAccepted}
+                          onChange={(e) => setTermsAccepted(e.target.checked)}
+                          className="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded-lg checked:bg-blue-600 checked:border-blue-600 transition-all cursor-pointer"
+                        />
+                        <Check className="absolute w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-500 group-hover:text-slate-700 transition-colors uppercase tracking-tight">
+                        Eu concordo com os termos de uso e política de privacidade
+                      </span>
+                    </label>
+                  </div>
+                </>
+              )}
 
               <button
                 type="submit"
@@ -528,45 +362,32 @@ export default function LoginPage() {
                   <Loader2 className="w-6 h-6 animate-spin" />
                 ) : (
                   <>
-                    {isLogin ? 'Entrar com E-mail' : 'Criar Conta com E-mail'}
+                    {isLogin ? 'ENTRAR NO APP' : 'CADASTRAR E INICIAR TESTE'}
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </button>
             </motion.form>
-
-            <div className="relative flex items-center gap-4 py-2">
-              <div className="flex-1 h-px bg-slate-100"></div>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">ou continuar com</span>
-              <div className="flex-1 h-px bg-slate-100"></div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="w-full bg-white border-2 border-slate-100 text-slate-700 font-bold py-4 rounded-2xl shadow-sm hover:border-blue-100 hover:bg-blue-50/30 transition-all flex items-center justify-center gap-4 disabled:opacity-70 active:scale-[0.98]"
-            >
-              {loading ? (
-                <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-              ) : (
-                <>
-                  <Chrome className="w-6 h-6 text-blue-500" />
-                  Google
-                </>
-              )}
-            </button>
           </div>
 
             <div className="mt-10 pt-8 border-t border-slate-50 text-center space-y-6">
               <button
-                onClick={() => setIsLogin(!isLogin)}
-                className="bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 w-full active:scale-[0.98]"
+                onClick={() => {
+                  setError('');
+                  setIsLogin(!isLogin);
+                }}
+                className="bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 w-full active:scale-[0.98] group"
               >
                 {isLogin 
-                  ? 'Iniciar MODO TESTE (7 Dias Grátis)' 
-                  : 'Já tenho uma conta / Fazer Login'}
+                  ? 'CONTA DE TESTE GRATUITO' 
+                  : 'Fazer Login Profissional'}
               </button>
+
+              {isLogin && (
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
+                  clique aqui para vc poder ultilizar o modo teste durante 7 dias  gratuito
+                </p>
+              )}
 
               <div className="pt-4 space-y-4">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Planos Profissionais</p>
