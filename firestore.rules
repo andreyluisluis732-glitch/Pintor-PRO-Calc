@@ -80,7 +80,9 @@ service cloud.firestore {
       return data.keys().hasAll(['uid']) &&
              data.uid == request.auth.uid &&
              (!data.keys().contains('cpf') || isValidCpfFormat(data.cpf)) &&
-             data.get('businessPhone', '') is string && data.get('businessPhone', '').size() <= 20;
+             data.get('businessPhone', '') is string && data.get('businessPhone', '').size() <= 50 &&
+             (!data.keys().contains('laborPricePerM2') || data.laborPricePerM2 is number) &&
+             (!data.keys().contains('defaultPrices') || data.defaultPrices is map);
     }
 
     // ===============================================================

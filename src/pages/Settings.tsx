@@ -9,10 +9,11 @@ export default function SettingsPage() {
   const location = useLocation();
   const search = location.search;
   const isClientMode = new URLSearchParams(search).get('mode') === 'client';
-  const { businessPhone, cpf, defaultPrices, updateSettings, isPro, isTrial, deferredPrompt, user } = useEstimate();
+  const { businessPhone, cpf, defaultPrices, updateSettings, isPro, isTrial, deferredPrompt, user, loading: contextLoading } = useEstimate();
   const [phone, setPhone] = useState(businessPhone);
   const [userCpf, setUserCpf] = useState(cpf || '');
   const [prices, setPrices] = useState(defaultPrices);
+  const [localPrices, setLocalPrices] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [installing, setInstalling] = useState(false);
@@ -34,6 +35,17 @@ export default function SettingsPage() {
     setTimeout(() => setCopied(false), 3000);
   };
 
+  const formatPhone = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .replace(/(-\d{4})\d+?$/, '$1');
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhone(formatPhone(e.target.value));
+  };
   const handleSavePhone = async () => {
     setSavingPhone(true);
     await updateSettings({ 
@@ -45,16 +57,35 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    setTimeout(() => {
+    if (!isEditingPhone) {
       setPhone(businessPhone);
-      setUserCpf(cpf || '');
+    }
+  }, [businessPhone, isEditingPhone]);
+
+  useEffect(() => {
+    if (!isEditing) {
       setPrices(defaultPrices);
-      // If no phone is set, start in editing mode
-      if (!businessPhone) {
-        setIsEditing(true);
-      }
-    }, 0);
-  }, [businessPhone, defaultPrices, cpf]);
+      setLocalPrices({
+        m2: defaultPrices.m2.toString(),
+        empreitada: defaultPrices.empreitada.toString(),
+        diaria: defaultPrices.diaria.toString(),
+        ambiente: defaultPrices.ambiente.toString(),
+        especifico: defaultPrices.especifico.toString(),
+        completo: defaultPrices.completo.toString()
+      });
+    }
+  }, [defaultPrices, isEditing]);
+
+  useEffect(() => {
+    setUserCpf(cpf || '');
+  }, [cpf]);
+
+  useEffect(() => {
+    // If no phone is set, start in editing mode
+    if (!contextLoading && !businessPhone) {
+      setIsEditingPhone(true);
+    }
+  }, [businessPhone, contextLoading]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -68,14 +99,22 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true);
+    const updatedPrices = {
+      m2: parseFloat(localPrices.m2) || 0,
+      empreitada: parseFloat(localPrices.empreitada) || 0,
+      diaria: parseFloat(localPrices.diaria) || 0,
+      ambiente: parseFloat(localPrices.ambiente) || 0,
+      especifico: parseFloat(localPrices.especifico) || 0,
+      completo: parseFloat(localPrices.completo) || 0
+    };
+    
     await updateSettings({ 
       businessPhone: phone, 
-      laborPricePerM2: prices.m2 || 0,
-      defaultPrices: prices
+      laborPricePerM2: updatedPrices.m2,
+      defaultPrices: updatedPrices
     });
     setSaving(false);
     setIsEditing(false);
-    setTimeout(() => {}, 3000);
   };
 
   const formatCurrency = (value: number) => {
@@ -85,8 +124,8 @@ export default function SettingsPage() {
     }).format(value);
   };
 
-  const updatePrice = (type: keyof typeof prices, value: string) => {
-    setPrices(prev => ({ ...prev, [type]: parseFloat(value) || 0 }));
+  const updateLocalPrice = (type: string, value: string) => {
+    setLocalPrices(prev => ({ ...prev, [type]: value }));
   };
 
   return (
@@ -176,11 +215,11 @@ export default function SettingsPage() {
                       <input 
                         className="w-full h-14 pl-12 pr-4 bg-white border-2 border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all text-lg font-medium outline-none shadow-sm" 
                         id="business-phone" 
-                        placeholder="5511999999999" 
+                        placeholder="(11) 99999-9999" 
                         type="text"
                         autoFocus
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
+                        onChange={handlePhoneChange}
                       />
                     </div>
                     <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">
@@ -270,8 +309,8 @@ export default function SettingsPage() {
                             id="price-m2" 
                             type="number"
                             step="0.01"
-                            value={prices.m2}
-                            onChange={(e) => updatePrice('m2', e.target.value)}
+                            value={localPrices.m2 || ''}
+                            onChange={(e) => updateLocalPrice('m2', e.target.value)}
                           />
                         </div>
                       </div>
@@ -288,8 +327,8 @@ export default function SettingsPage() {
                             id="price-empreitada" 
                             type="number"
                             step="0.01"
-                            value={prices.empreitada}
-                            onChange={(e) => updatePrice('empreitada', e.target.value)}
+                            value={localPrices.empreitada || ''}
+                            onChange={(e) => updateLocalPrice('empreitada', e.target.value)}
                           />
                         </div>
                       </div>
@@ -306,8 +345,8 @@ export default function SettingsPage() {
                             id="price-diaria" 
                             type="number"
                             step="0.01"
-                            value={prices.diaria}
-                            onChange={(e) => updatePrice('diaria', e.target.value)}
+                            value={localPrices.diaria || ''}
+                            onChange={(e) => updateLocalPrice('diaria', e.target.value)}
                           />
                         </div>
                       </div>
@@ -324,8 +363,8 @@ export default function SettingsPage() {
                             id="price-ambiente" 
                             type="number"
                             step="0.01"
-                            value={prices.ambiente}
-                            onChange={(e) => updatePrice('ambiente', e.target.value)}
+                            value={localPrices.ambiente || ''}
+                            onChange={(e) => updateLocalPrice('ambiente', e.target.value)}
                           />
                         </div>
                       </div>
@@ -342,8 +381,8 @@ export default function SettingsPage() {
                             id="price-especifico" 
                             type="number"
                             step="0.01"
-                            value={prices.especifico}
-                            onChange={(e) => updatePrice('especifico', e.target.value)}
+                            value={localPrices.especifico || ''}
+                            onChange={(e) => updateLocalPrice('especifico', e.target.value)}
                           />
                         </div>
                       </div>
@@ -360,8 +399,8 @@ export default function SettingsPage() {
                             id="price-completo" 
                             type="number"
                             step="0.01"
-                            value={prices.completo}
-                            onChange={(e) => updatePrice('completo', e.target.value)}
+                            value={localPrices.completo || ''}
+                            onChange={(e) => updateLocalPrice('completo', e.target.value)}
                           />
                         </div>
                       </div>

@@ -47,6 +47,18 @@ function CalculateContent() {
   const categories = Array.from(new Set(PRODUCT_CATALOG.map(p => p.category)));
   const filteredProducts = PRODUCT_CATALOG.filter(p => p.category === activeCategory);
 
+  const formatPhone = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .replace(/(-\d{4})\d+?$/, '$1');
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setClientPhone(formatPhone(e.target.value));
+  };
+
   const handleNextStep = () => {
     if (step === 1) {
       if (!clientName) {
@@ -194,7 +206,7 @@ function CalculateContent() {
                     placeholder="(00) 00000-0000" 
                     type="text"
                     value={clientPhone}
-                    onChange={(e) => setClientPhone(e.target.value)}
+                    onChange={handlePhoneChange}
                   />
                 </div>
 

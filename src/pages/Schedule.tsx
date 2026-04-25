@@ -38,6 +38,18 @@ export default function SchedulePage() {
     '08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'
   ];
 
+  const formatPhone = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2')
+      .replace(/(-\d{4})\d+?$/, '$1');
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewApp({ ...newApp, clientPhone: formatPhone(e.target.value) });
+  };
+
   const handleSave = async () => {
     if (!newApp.clientName || !newApp.clientPhone) return;
     
@@ -263,7 +275,7 @@ export default function SchedulePage() {
                     className="w-full h-12 px-4 bg-surface-container-highest rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all"
                     placeholder="(00) 00000-0000"
                     value={newApp.clientPhone}
-                    onChange={e => setNewApp({...newApp, clientPhone: e.target.value})}
+                    onChange={handlePhoneChange}
                   />
                 </div>
                 <div className="space-y-1">
