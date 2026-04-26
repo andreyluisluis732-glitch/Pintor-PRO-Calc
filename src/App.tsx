@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import ClientLayout from './components/ClientLayout';
 import { useEstimate } from './context/EstimateContext';
 import Home from './pages/Home';
@@ -74,6 +75,7 @@ function App() {
           <AppRoutes />
         </ClientLayout>
       </Router>
+      <SpeedInsights />
     </ErrorBoundary>
   );
 }
