@@ -8,7 +8,7 @@ import { PRODUCT_CATALOG } from '../constants/catalog';
 export default function CatalogPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const urlParams = new URLSearchParams(search);
+  const urlParams = new URLSearchParams(location.search);
   const isClientMode = urlParams.get('mode') === 'client';
   const consultantId = urlParams.get('consultant');
   const clientParam = isClientMode 

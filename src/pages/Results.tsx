@@ -117,12 +117,26 @@ export default function ResultsPage() {
     }
   };
 
-  const handleSendToWhatsApp = () => {
+  const handleSendToWhatsApp = async () => {
     const targetPhone = (user && currentEstimate.clientPhone) ? currentEstimate.clientPhone : businessPhone;
     
     if (!targetPhone) {
       setError(user ? 'O cliente não informou o WhatsApp.' : 'O consultor ainda não configurou o número de WhatsApp.');
       return;
+    }
+
+    // Auto-save if not already saved
+    let estimateId = currentEstimate.id;
+    if (!estimateId) {
+      try {
+        const id = await saveEstimate(currentEstimate as Estimate);
+        if (id) {
+          estimateId = id;
+          setCurrentEstimate({ ...currentEstimate, id });
+        }
+      } catch (err) {
+        console.warn("Could not auto-save estimate before sending:", err);
+      }
     }
 
     const locationParts = [currentEstimate.location, currentEstimate.neighborhood, currentEstimate.city].filter(Boolean);
@@ -177,8 +191,8 @@ export default function ResultsPage() {
       message += `📝 *OBSERVAÇÕES:*\n${currentEstimate.notes}\n`;
     }
 
-    if (currentEstimate.id) {
-      const shareUrl = `${window.location.origin}/results/${currentEstimate.id}${shareParam}`;
+    if (estimateId) {
+      const shareUrl = `${window.location.origin}/results/${estimateId}${shareParam}`;
       message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
       message += `🔗 *VER DETALHES COMPLETOS:*\n${shareUrl}\n`;
     }

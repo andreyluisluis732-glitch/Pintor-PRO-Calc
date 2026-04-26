@@ -354,12 +354,14 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
   };
 
   const saveEstimate = async (estimateData: Omit<Estimate, 'id' | 'uid'>) => {
-    if (!user) return;
+    const targetUid = user ? user.uid : professionalUid;
+    if (!targetUid) return;
 
     try {
       const docRef = await addDoc(collection(db, 'estimates'), {
         ...estimateData,
-        uid: user.uid,
+        uid: targetUid,
+        isFromClient: !user,
         createdAt: serverTimestamp()
       });
       return docRef.id;
