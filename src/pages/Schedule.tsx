@@ -55,7 +55,7 @@ export default function SchedulePage() {
     
     // 1. Prepare WhatsApp message first to avoid popup blocking after async call
     let phone = (user ? newApp.clientPhone : businessPhone).replace(/\D/g, '');
-    if (phone.length >= 10 && !phone.startsWith('55')) {
+    if (phone.length >= 10 && phone.length <= 11) {
       phone = '55' + phone;
     }
     

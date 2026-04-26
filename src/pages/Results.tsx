@@ -18,9 +18,15 @@ export default function ResultsPage() {
   const urlParams = new URLSearchParams(search);
   const isClientMode = urlParams.get('mode') === 'client';
   const consultantId = urlParams.get('consultant');
-  const clientParam = isClientMode 
-    ? `?mode=client${consultantId ? `&consultant=${consultantId}` : ''}` 
+  const isClientView = isClientMode || !!consultantId;
+  const currentConsultantId = consultantId || user?.uid;
+  
+  const clientParam = isClientView 
+    ? `?mode=client${currentConsultantId ? `&consultant=${currentConsultantId}` : ''}` 
     : '';
+
+  const shareParam = `?mode=client${currentConsultantId ? `&consultant=${currentConsultantId}` : ''}`;
+
   const { currentEstimate, setCurrentEstimate, saveEstimate, getEstimate, user, businessPhone, isPro } = useEstimate();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(!!estimateId);
@@ -123,7 +129,7 @@ export default function ResultsPage() {
     const location = locationParts.join(', ');
     
     let phone = targetPhone.replace(/\D/g, '');
-    if (phone.length >= 10 && !phone.startsWith('55')) {
+    if (phone.length >= 10 && phone.length <= 11) {
       phone = '55' + phone;
     }
 
@@ -172,7 +178,7 @@ export default function ResultsPage() {
     }
 
     if (currentEstimate.id) {
-      const shareUrl = `${window.location.origin}/results/${currentEstimate.id}${clientParam}`;
+      const shareUrl = `${window.location.origin}/results/${currentEstimate.id}${shareParam}`;
       message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
       message += `🔗 *VER DETALHES COMPLETOS:*\n${shareUrl}\n`;
     }
@@ -206,7 +212,7 @@ export default function ResultsPage() {
       setError("Salve o orçamento primeiro para gerar um link exclusivo.");
       return;
     }
-    const shareUrl = `${window.location.origin}/results/${currentEstimate.id}${clientParam}`;
+    const shareUrl = `${window.location.origin}/results/${currentEstimate.id}${shareParam}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
       setSuccess("Link copiado para a área de transferência!");
     });
@@ -566,21 +572,44 @@ export default function ResultsPage() {
             </button>
           )}
           
+          {!user && (
+            <div className="bg-blue-600 p-6 rounded-2xl shadow-xl space-y-4 mb-4">
+              <div className="flex items-center gap-3 text-white mb-2">
+                <CalendarIcon size={24} />
+                <h3 className="font-black text-lg uppercase tracking-tight leading-none">Consultoria Premium</h3>
+              </div>
+              <p className="text-blue-100 text-xs font-medium leading-relaxed">
+                Gostou do orçamento? Agende agora uma consulta online gratuita para validar seu projeto e tirar todas as suas dúvidas com o profissional.
+              </p>
+              <button 
+                onClick={() => navigate('/schedule' + clientParam)}
+                className="w-full bg-white text-blue-600 py-4 rounded-xl font-black text-sm active:scale-95 transition-all shadow-lg flex items-center justify-center gap-3"
+              >
+                AGENDAR CONSULTA ONLINE
+                <ArrowRight size={18} />
+              </button>
+            </div>
+          )}
+
           <button 
             onClick={handleSendToWhatsApp}
-            className="w-full bg-gradient-to-b from-[#25D366] to-[#128C7E] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg active:scale-95 duration-150 transition-transform"
+            className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg active:scale-95 duration-150 transition-transform ${
+              user ? 'bg-gradient-to-b from-[#25D366] to-[#128C7E] text-white' : 'bg-white text-[#128C7E] border-2 border-[#25D366]'
+            }`}
           >
             <Send size={20} />
-            {user ? 'Enviar Orçamento para o Cliente' : 'Enviar Orçamento para o Consultor'}
+            {user ? 'Enviar Orçamento para o Cliente' : 'Enviar para o Consultor no WhatsApp'}
           </button>
           
-          <button 
-            onClick={() => navigate('/schedule' + clientParam)}
-            className="w-full bg-secondary text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-md active:scale-95 duration-150 transition-transform"
-          >
-            <CalendarIcon size={20} />
-            Agendar Consulta Online
-          </button>
+          {user && (
+            <button 
+              onClick={() => navigate('/schedule' + clientParam)}
+              className="w-full bg-secondary text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-md active:scale-95 duration-150 transition-transform"
+            >
+              <CalendarIcon size={20} />
+              Agendar Consulta com Cliente
+            </button>
+          )}
           <button 
             onClick={handleExportPDF}
             className="w-full bg-surface-container-high text-on-secondary-container py-4 rounded-xl font-bold flex items-center justify-center gap-3 active:scale-95 duration-150 transition-transform"

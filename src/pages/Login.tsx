@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { auth, db, firebaseConfig } from '../lib/firebase';
+import { auth, db, firebaseConfig, googleProvider } from '../lib/firebase';
 import { useEstimate } from '../context/EstimateContext';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   updateProfile, 
-  onAuthStateChanged
+  onAuthStateChanged,
+  signInWithPopup
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,6 +25,8 @@ export default function LoginPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showCompleteProfile, setShowCompleteProfile] = useState(false);
+  const [tempUser, setTempUser] = useState<any>(null);
 
   const formatCPF = (value: string) => {
     return value
@@ -77,6 +80,37 @@ export default function LoginPage() {
     setPhone(formatPhone(e.target.value));
   };
 
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (!userDoc.exists()) {
+        // New user from Google, need to collect extra info
+        setTempUser(user);
+        setName(user.displayName || '');
+        setEmail(user.email || '');
+        setShowCompleteProfile(true);
+        setIsLogin(false); // Move to "register" mode UI-wise
+      } else {
+        navigate('/');
+      }
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Login cancelado.');
+      } else {
+        setError('Erro ao entrar com Google. Tente novamente.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -126,14 +160,23 @@ export default function LoginPage() {
           return;
         }
 
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        let user;
+        let uid;
+
+        if (tempUser) {
+          user = tempUser;
+          uid = tempUser.uid;
+        } else {
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          user = userCredential.user;
+          uid = user.uid;
+        }
         
         await updateProfile(user, { displayName: name });
         
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: user.email,
+        await setDoc(doc(db, 'users', uid), {
+          uid: uid,
+          email: email,
           displayName: name,
           cpf: cpf.replace(/\D/g, ''),
           role: 'user',
@@ -144,8 +187,8 @@ export default function LoginPage() {
         });
 
         // Also create an initial settings doc with basic info
-        await setDoc(doc(db, 'settings', user.uid), {
-          uid: user.uid,
+        await setDoc(doc(db, 'settings', uid), {
+          uid: uid,
           businessPhone: '',
           cpf: cpf.replace(/\D/g, ''),
           laborPricePerM2: 0,
@@ -198,10 +241,15 @@ export default function LoginPage() {
 
           <div className="text-center mb-10">
             <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-3">
-              {isLogin ? 'Login Profissional' : 'Modo Teste Grátis'}
+              {showCompleteProfile ? 'Completar Cadastro' : (isLogin ? 'Entrar no App' : 'Criar minha conta')}
             </h2>
             
-            {isLogin ? (
+            {showCompleteProfile ? (
+               <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-4 text-center">
+                <p className="text-amber-800 text-xs font-bold uppercase tracking-wider mb-1">Passo Final</p>
+                <p className="text-slate-600 text-sm font-medium">Precisamos do seu CPF para gerar orçamentos profissionais.</p>
+              </div>
+            ) : isLogin ? (
               <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-4 text-center">
                 <p className="text-blue-800 text-xs font-bold uppercase tracking-wider mb-2">Acesso do Profissional</p>
                 <p className="text-slate-600 text-sm font-medium italic">"A excelência na pintura começa com um bom orçamento."</p>
@@ -265,49 +313,76 @@ export default function LoginPage() {
             )}
 
           <div className="space-y-6">
+            {!showCompleteProfile && (
+              <div className="space-y-4 mb-8">
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                  {isLogin ? 'Entrar com Google' : 'Cadastrar com Google'}
+                </button>
+
+                <div className="relative flex items-center gap-4 text-slate-400">
+                  <div className="flex-1 h-px bg-slate-100"></div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">ou use seu e-mail</span>
+                  <div className="flex-1 h-px bg-slate-100"></div>
+                </div>
+              </div>
+            )}
+
             <motion.form 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               onSubmit={handleSubmit} 
               className="space-y-4"
             >
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                <input
-                  type="email"
-                  placeholder="Seu E-mail"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
-                />
-              </div>
+              {!showCompleteProfile && (
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <input
+                    type="email"
+                    placeholder="Seu E-mail"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={showCompleteProfile}
+                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium disabled:opacity-70"
+                  />
+                </div>
+              )}
 
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                <input
-                  type="password"
-                  placeholder={isLogin ? "Sua Senha" : "Crie uma senha"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
-                />
-              </div>
+              {!showCompleteProfile && (
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                  <input
+                    type="password"
+                    placeholder={isLogin ? "Sua Senha" : "Crie uma senha"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
+                  />
+                </div>
+              )}
 
               {!isLogin && (
                 <>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                    <input
-                      type="password"
-                      placeholder="Confirmar a senha"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
-                    />
-                  </div>
+                  {!showCompleteProfile && (
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                      <input
+                        type="password"
+                        placeholder="Confirmar a senha"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none font-medium"
+                      />
+                    </div>
+                  )}
 
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -362,30 +437,47 @@ export default function LoginPage() {
                   <Loader2 className="w-6 h-6 animate-spin" />
                 ) : (
                   <>
-                    {isLogin ? 'ENTRAR NO APP' : 'CADASTRAR E INICIAR TESTE'}
+                    {showCompleteProfile ? 'FINALIZAR MEU CADASTRO' : (isLogin ? 'ENTRAR NO APP' : 'CADASTRAR E INICIAR TESTE')}
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </button>
+              
+              {showCompleteProfile && (
+                 <button
+                 type="button"
+                 onClick={() => {
+                   setShowCompleteProfile(false);
+                   setTempUser(null);
+                   setIsLogin(true);
+                   auth.signOut();
+                 }}
+                 className="w-full text-slate-400 font-bold py-2 text-xs uppercase tracking-widest"
+               >
+                 Cancelar e Voltar
+               </button>
+              )}
             </motion.form>
           </div>
 
             <div className="mt-10 pt-8 border-t border-slate-50 text-center space-y-6">
-              <button
-                onClick={() => {
-                  setError('');
-                  setIsLogin(!isLogin);
-                }}
-                className="bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 w-full active:scale-[0.98] group"
-              >
-                {isLogin 
-                  ? 'CONTA DE TESTE GRATUITO' 
-                  : 'Fazer Login Profissional'}
-              </button>
+              {!showCompleteProfile && (
+                <button
+                  onClick={() => {
+                    setError('');
+                    setIsLogin(!isLogin);
+                  }}
+                  className="bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-3 w-full active:scale-[0.98] group"
+                >
+                  {isLogin 
+                    ? 'QUERO CRIAR MINHA CONTA' 
+                    : 'JÁ TENHO UMA CONTA'}
+                </button>
+              )}
 
-              {isLogin && (
+              {(isLogin && !showCompleteProfile) && (
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
-                  clique aqui para vc poder ultilizar o modo teste durante 7 dias  gratuito
+                  clique acima par vc poder criar sua conta e ultilizar o modo teste durante 7 dias gratuito
                 </p>
               )}
 

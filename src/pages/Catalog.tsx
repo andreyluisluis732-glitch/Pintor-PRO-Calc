@@ -8,9 +8,12 @@ import { PRODUCT_CATALOG } from '../constants/catalog';
 export default function CatalogPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const search = location.search;
-  const isClientMode = new URLSearchParams(search).get('mode') === 'client';
-  const clientParam = isClientMode ? '?mode=client' : '';
+  const urlParams = new URLSearchParams(search);
+  const isClientMode = urlParams.get('mode') === 'client';
+  const consultantId = urlParams.get('consultant');
+  const clientParam = isClientMode 
+    ? `?mode=client${consultantId ? `&consultant=${consultantId}` : ''}` 
+    : '';
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('Todas');
 
