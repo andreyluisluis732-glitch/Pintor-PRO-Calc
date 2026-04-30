@@ -64,6 +64,9 @@ export interface Estimate {
   status: 'Finalizado' | 'Aguardando' | 'Cancelado';
   mediaUrls?: string[];
   notes?: string;
+  aiPhotoUrl?: string;
+  aiPreviewUrl?: string;
+  isAiGenerated?: boolean;
 }
 
 interface LocalUser {

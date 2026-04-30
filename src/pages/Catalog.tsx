@@ -159,7 +159,7 @@ export default function CatalogPage() {
                       <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Cores Disponíveis</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      {product.colors.map(color => (
+                      {product.colors && product.colors.length > 0 ? product.colors.map(color => (
                         <div key={color.name} className="flex items-center gap-2 p-1.5 bg-surface-container-low rounded-xl border border-outline-variant/5">
                           <div 
                             className="w-8 h-8 rounded-lg shrink-0 shadow-sm border border-black/5" 
@@ -174,7 +174,9 @@ export default function CatalogPage() {
                             </span>
                           </div>
                         </div>
-                      ))}
+                      )) : (
+                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest col-span-2 py-2">Consulte cores disponíveis na loja</p>
+                      )}
                     </div>
                   </div>
                 </div>

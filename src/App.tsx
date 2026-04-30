@@ -7,6 +7,7 @@ import Home from './pages/Home';
 import Calculate from './pages/Calculate';
 import Results from './pages/Results';
 import Catalog from './pages/Catalog';
+import AIEstimate from './pages/AIEstimate';
 import History from './pages/History';
 import Settings from './pages/Settings';
 import Schedule from './pages/Schedule';
@@ -49,6 +50,7 @@ function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/calculate" element={<Calculate />} />
+      <Route path="/smart-estimate" element={<AIEstimate />} />
       <Route path="/results/:estimateId" element={<Results />} />
       <Route path="/results" element={<Results />} />
       <Route path="/catalog" element={<Catalog />} />

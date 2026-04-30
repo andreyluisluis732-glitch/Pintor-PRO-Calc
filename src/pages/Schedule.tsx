@@ -53,10 +53,12 @@ export default function SchedulePage() {
   const handleSave = async () => {
     if (!newApp.clientName || !newApp.clientPhone) return;
     
-    // 1. Prepare WhatsApp message first to avoid popup blocking after async call
-    let phone = (user ? newApp.clientPhone : businessPhone).replace(/\D/g, '');
-    if (phone.length >= 10 && phone.length <= 11) {
-      phone = '55' + phone;
+    // 1. Prepare WhatsApp message
+    let phoneNum = (user ? newApp.clientPhone : businessPhone).replace(/\D/g, '');
+    if (phoneNum.length === 10 || phoneNum.length === 11) {
+      if (!phoneNum.startsWith('55')) {
+        phoneNum = '55' + phoneNum;
+      }
     }
     
     const formattedDate = newApp.date.split('-').reverse().join('/');
@@ -69,55 +71,38 @@ export default function SchedulePage() {
       message += `Olá *${newApp.clientName}*, confirmo nossa consulta técnica:\n\n`;
       message += `📌 *DETALHES DO AGENDAMENTO*\n`;
       message += `📅 Data: ${formattedDate}\n`;
-      message += `⏰ Horário: ${newApp.time}\n\n`;
+      message += `⏰ Horário: ${newApp.time}\n`;
+      if (newApp.clientAddress) message += `📍 Local: ${newApp.clientAddress}\n\n`;
 
       if (currentEstimate && currentEstimate.totalCost) {
         message += `📋 *RESUMO DO ORÇAMENTO*\n`;
         message += `🏠 Imóvel: ${currentEstimate.propertyType || 'Não informado'}\n`;
         message += `📐 Área: ${currentEstimate.area} m²\n`;
-        message += `🎨 Cor: ${currentEstimate.color || 'A definir'}\n`;
-        message += `📦 Material: ${currentEstimate.includePaint ? 'Incluso' : 'Por conta do cliente'}\n`;
         message += `💰 Investimento: R$ ${(currentEstimate.totalCost || 0).toLocaleString('pt-BR')}\n\n`;
-        message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-        message += `_Estarei aí para validar os detalhes e fechar o serviço!_`;
-      } else {
-        message += `_Estarei no local para realizar a medição e passar o orçamento detalhado._`;
       }
+      
+      message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+      message += `_Estarei aí para validar os detalhes e fechar o serviço!_`;
     } else {
       message += `Olá! Gostaria de agendar uma consulta técnica para avaliação de serviço:\n\n`;
       message += `👤 *CLIENTE:* ${newApp.clientName}\n`;
-      message += `📞 *WHATSAPP:* ${newApp.clientPhone}\n`;
-      if (newApp.clientEmail) {
-        message += `📧 *E-MAIL:* ${newApp.clientEmail}\n`;
-      }
       message += `📅 *DATA:* ${formattedDate}\n`;
       message += `⏰ *HORÁRIO:* ${newApp.time}\n`;
-      message += `📍 *ENDEREÇO:* ${newApp.clientAddress || 'Não informado'}\n\n`;
+      if (newApp.clientAddress) message += `📍 *ENDEREÇO:* ${newApp.clientAddress}\n`;
       
       if (newApp.notes) {
-        message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-        message += `📝 *OBSERVAÇÕES:*\n${newApp.notes}\n`;
+        message += `\n📝 *OBSERVAÇÕES:*\n${newApp.notes}\n`;
       }
-      message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+      message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
       message += `_Aguardando sua confirmação!_`;
     }
 
-    message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-    message += `_Gerado via Pintor PRO Calc_`;
+    message += `\n\n_Gerado via Pintor PRO Calc_`;
 
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+    const whatsappUrl = `https://wa.me/${phoneNum}?text=${encodeURIComponent(message)}`;
 
-    // 2. Open WhatsApp immediately to avoid browser blocking the popup after the await
-    if (phone) {
-      try {
-        window.open(whatsappUrl, '_blank');
-      } catch {
-        const link = document.createElement('a');
-        link.href = whatsappUrl;
-        link.target = '_blank';
-        link.click();
-      }
+    if (phoneNum) {
+      window.open(whatsappUrl, '_blank');
     }
 
     try {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon, HelpCircle, AlertCircle, X, Copy } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Paintbrush, HardHat, Settings, Send, FileText, Bookmark, Calendar as CalendarIcon, HelpCircle, AlertCircle, X, Copy, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -125,26 +125,30 @@ export default function ResultsPage() {
       return;
     }
 
+    setLoading(true);
     // Auto-save if not already saved
-    let estimateId = currentEstimate.id;
-    if (!estimateId) {
+    let currentId = currentEstimate.id;
+    if (!currentId) {
       try {
         const id = await saveEstimate(currentEstimate as Estimate);
         if (id) {
-          estimateId = id;
-          setCurrentEstimate({ ...currentEstimate, id });
+          currentId = id;
+          setCurrentEstimate({ ...currentEstimate, id: id });
         }
       } catch (err) {
         console.warn("Could not auto-save estimate before sending:", err);
       }
     }
+    setLoading(false);
 
     const locationParts = [currentEstimate.location, currentEstimate.neighborhood, currentEstimate.city].filter(Boolean);
     const location = locationParts.join(', ');
     
     let phone = targetPhone.replace(/\D/g, '');
-    if (phone.length >= 10 && phone.length <= 11) {
-      phone = '55' + phone;
+    if (phone.length === 10 || phone.length === 11) {
+      if (!phone.startsWith('55')) {
+        phone = '55' + phone;
+      }
     }
 
     if (!phone) {
@@ -166,59 +170,45 @@ export default function ResultsPage() {
     message += `📌 *DADOS DO PROJETO*\n`;
     if (currentEstimate.clientName) message += `👤 Cliente: ${currentEstimate.clientName}\n`;
     message += `🏠 Tipo: ${currentEstimate.propertyType || 'Não informado'}\n`;
-    message += `📍 Local: ${location || 'Não informado'}\n`;
+    if (location) message += `📍 Local: ${location}\n`;
     message += `📐 Área: ${currentEstimate.area} m²\n\n`;
     
     message += `🛠️ *DADOS DO SERVIÇO*\n`;
-    message += `💰 Cobrança: ${currentEstimate.pricingType ? pricingLabels[currentEstimate.pricingType] : 'Não informado'}\n`;
-    if (currentEstimate.pricingType === 'm2') {
-      message += `💵 Valor/m²: ${formatCurrency(currentEstimate.pricePerM2 || 0)}\n`;
+    if (currentEstimate.isAiGenerated) {
+      message += `🤖 *GERADO POR IA SMART*\n`;
+      message += `📝 Descrição IA: ${currentEstimate.notes?.substring(0, 200)}...\n`;
+    } else {
+      message += `💰 Cobrança: ${currentEstimate.pricingType ? pricingLabels[currentEstimate.pricingType] : 'Não informado'}\n`;
+      if (currentEstimate.pricingType === 'm2') {
+        message += `💵 Valor/m²: ${formatCurrency(currentEstimate.pricePerM2 || 0)}\n`;
+      }
     }
     
     if (currentEstimate.productId && currentEstimate.includePaint) {
-      message += `🧴 Produto: ${product.name}\n`;
+      message += `\n🧴 *MATERIAL SUGERIDO*\n`;
+      message += `🔹 Produto: ${product.name}\n`;
       if (currentEstimate.color) message += `🎨 Cor: ${currentEstimate.color}\n`;
       message += `📦 Qtd: ${currentEstimate.packageCount} ${currentEstimate.packageSize === 'bucket' ? 'Balde(s)' : currentEstimate.packageSize === 'can' ? 'Lata(s)' : 'Litro(s)'}\n`;
-    } else {
-      message += `⚠️ Material: Por conta do cliente\n`;
     }
     
-    message += `\n💵 *INVESTIMENTO VALOR TOTAL*\n`;
+    message += `\n💵 *INVESTIMENTO TOTAL*\n`;
     message += `💎 *${formatCurrency(currentEstimate.totalCost || 0)}*\n`;
 
-    if (currentEstimate.notes) {
+    if (currentId) {
+      const shareUrl = `${window.location.origin}/results/${currentId}${shareParam}`;
       message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-      message += `📝 *OBSERVAÇÕES:*\n${currentEstimate.notes}\n`;
-    }
-
-    if (estimateId) {
-      const shareUrl = `${window.location.origin}/results/${estimateId}${shareParam}`;
-      message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-      message += `🔗 *VER DETALHES COMPLETOS:*\n${shareUrl}\n`;
+      message += `🔗 *DETALHES E FOTOS IA:*\n${shareUrl}\n`;
     }
 
     message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-    if (isProfessional) {
-      message += `_Este é um valor estimado. Fico à disposição para validar pessoalmente e fechar o serviço!_`;
-    } else {
-      message += `_Aguardando seu retorno para agendarmos uma visita técnica!_`;
-    }
-    message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-    message += `_Gerado via Pintor PRO Calc_`;
-
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+    message += isProfessional 
+      ? `_Fico à disposição para fechar o serviço!_` 
+      : `_Aguardando seu retorno para visita técnica!_`;
     
-    // Open WhatsApp immediately
-    try {
-      window.open(whatsappUrl, '_blank');
-    } catch {
-      // Fallback if window.open is blocked
-      const link = document.createElement('a');
-      link.href = whatsappUrl;
-      link.target = '_blank';
-      link.click();
-    }
+    message += `\n\n_Gerado por Pintor PRO Calc_`;
+
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
   
   const handleCopyLink = () => {
@@ -248,7 +238,7 @@ export default function ResultsPage() {
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text('ORÇAMENTO DE PINTURA PROFISSIONAL', 20, 32);
+      doc.text(currentEstimate.isAiGenerated ? 'ORÇAMENTO GERADO POR INTELIGÊNCIA ARTIFICIAL' : 'ORÇAMENTO DE PINTURA PROFISSIONAL', 20, 32);
       
       // Body
       doc.setTextColor(0, 0, 0);
@@ -286,17 +276,19 @@ export default function ResultsPage() {
       // @ts-expect-error doc.lastAutoTable is added by jspdf-autotable
       const finalY = doc.lastAutoTable.finalY + 20;
 
-      // Costs
+      // costs
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text('INVESTIMENTO ESTIMADO', 20, finalY);
 
       const costData = [];
-      if (currentEstimate.includePaint) {
-        costData.push(['Material', formatCurrency(currentEstimate.materialCost || 0)]);
+      if (currentEstimate.laborCost) {
+        costData.push(['Mão de Obra', formatCurrency(currentEstimate.laborCost)]);
       }
-      costData.push(['Mão de Obra', formatCurrency(currentEstimate.laborCost || 0)]);
-      costData.push(['TOTAL', formatCurrency(currentEstimate.totalCost || 0)]);
+      if (currentEstimate.materialCost) {
+        costData.push(['Material Estimado', formatCurrency(currentEstimate.materialCost)]);
+      }
+      costData.push(['VALOR TOTAL', formatCurrency(currentEstimate.totalCost || 0)]);
 
       autoTable(doc, {
         startY: finalY + 5,
@@ -306,6 +298,16 @@ export default function ResultsPage() {
         columnStyles: { 1: { halign: 'right' } },
         margin: { left: 20, right: 20 }
       });
+
+      if (currentEstimate.notes) {
+        // @ts-expect-error doc.lastAutoTable is added by jspdf-autotable
+        const notesY = doc.lastAutoTable.finalY + 15;
+        doc.setFontSize(10);
+        doc.text('OBSERVAÇÕES:', 20, notesY);
+        doc.setFont('helvetica', 'normal');
+        const splitNotes = doc.splitTextToSize(currentEstimate.notes, pageWidth - 40);
+        doc.text(splitNotes, 20, notesY + 7);
+      }
 
       // Footer
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -354,7 +356,55 @@ export default function ResultsPage() {
       </header>
 
       <main className="px-6 py-8 space-y-8 max-w-md mx-auto">
+        {/* AI Comparison section */}
+        {currentEstimate.isAiGenerated && currentEstimate.aiPhotoUrl && (
+          <motion.section 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <div className="bg-slate-900 rounded-[2.5rem] p-4 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-6 opacity-10">
+                <Zap size={120} className="text-blue-500" fill="currentColor" />
+              </div>
+              
+              <h3 className="text-white font-black text-xs uppercase tracking-[0.2em] mb-4 flex items-center gap-2 relative z-10">
+                <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                Simulação Inteligente IA
+              </h3>
+
+              <div className="grid grid-cols-2 gap-3 relative z-10">
+                <div className="space-y-2">
+                  <div className="aspect-[3/4] rounded-2xl overflow-hidden border border-white/5 relative">
+                    <img src={currentEstimate.aiPhotoUrl} alt="Original" className="w-full h-full object-cover" />
+                    <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg text-[8px] font-black text-white uppercase uppercase tracking-widest leading-none">Original</div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="aspect-[3/4] rounded-2xl overflow-hidden border border-blue-500/30 relative shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+                    {currentEstimate.aiPreviewUrl ? (
+                      <img src={currentEstimate.aiPreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                      </div>
+                    )}
+                    <div className="absolute bottom-2 left-2 bg-blue-600 px-2 py-1 rounded-lg text-[8px] font-black text-white uppercase uppercase tracking-widest leading-none">Resultado IA</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-white/5 rounded-2xl border border-white/5">
+                <p className="text-slate-400 text-[10px] font-medium leading-relaxed italic">
+                  "Esta é uma representação artística gerada por IA baseada na sua foto e solicitações. As cores e proporções podem variar no serviço real."
+                </p>
+              </div>
+            </div>
+          </motion.section>
+        )}
+
         {/* Results Hero Card */}
+
         <motion.section 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}

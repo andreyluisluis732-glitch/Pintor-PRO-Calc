@@ -100,6 +100,32 @@ export default function Home() {
 
           {/* Main Action Grid */}
           <div className="grid grid-cols-2 gap-4">
+            <Link to={`/smart-estimate${clientParam}`} className="col-span-2 group">
+              <div className="bg-gradient-to-br from-blue-700 to-indigo-900 p-6 rounded-3xl shadow-xl shadow-blue-200 hover:scale-[1.02] transition-all active:scale-[0.98] relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Zap size={100} fill="white" />
+                </div>
+                <div className="flex items-center gap-4 relative z-10">
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-lg border border-white/10">
+                    <Zap size={28} fill="white" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-white text-lg leading-none mb-1">Orçamento Smart IA</h3>
+                    <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest">Gere orçamento com 1 foto</p>
+                  </div>
+                </div>
+                <div className="mt-6 flex items-center justify-between relative z-10">
+                  <span className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
+                    Cálculo Inteligente
+                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]"></span>
+                  </span>
+                  <div className="bg-white/10 p-2 rounded-xl text-white group-hover:translate-x-1 transition-transform">
+                    <ArrowRight size={18} />
+                  </div>
+                </div>
+              </div>
+            </Link>
+
             <Link to={`/calculate${clientParam}`} className="col-span-2 group">
               <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 hover:border-blue-500/50 transition-all active:scale-[0.98] relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
