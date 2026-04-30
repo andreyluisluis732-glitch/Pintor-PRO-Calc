@@ -125,8 +125,22 @@ export default function ResultsPage() {
       return;
     }
 
+    // Prepare phone number
+    let phone = targetPhone.replace(/\D/g, '');
+    if (phone.length === 10 || phone.length === 11) {
+      if (!phone.startsWith('55')) {
+        phone = '55' + phone;
+      }
+    }
+
+    if (!phone) {
+      setError('Número de WhatsApp inválido.');
+      return;
+    }
+
+    // To prevent browser popup blocking, we save first IF needed, 
+    // but if we already have an ID, we can proceed faster.
     setLoading(true);
-    // Auto-save if not already saved
     let currentId = currentEstimate.id;
     if (!currentId) {
       try {
@@ -144,18 +158,6 @@ export default function ResultsPage() {
     const locationParts = [currentEstimate.location, currentEstimate.neighborhood, currentEstimate.city].filter(Boolean);
     const location = locationParts.join(', ');
     
-    let phone = targetPhone.replace(/\D/g, '');
-    if (phone.length === 10 || phone.length === 11) {
-      if (!phone.startsWith('55')) {
-        phone = '55' + phone;
-      }
-    }
-
-    if (!phone) {
-      setError('Número de WhatsApp inválido.');
-      return;
-    }
-
     const isProfessional = !!user;
     let message = `━━━━━━━━━━━━━━━━━━━━━━\n`;
     message += `🎨 *ORÇAMENTO PINTOR PRO*\n`;
@@ -171,7 +173,7 @@ export default function ResultsPage() {
     if (currentEstimate.clientName) message += `👤 Cliente: ${currentEstimate.clientName}\n`;
     message += `🏠 Tipo: ${currentEstimate.propertyType || 'Não informado'}\n`;
     if (location) message += `📍 Local: ${location}\n`;
-    message += `📐 Área: ${currentEstimate.area} m²\n\n`;
+    message += `📐 Área: ${currentEstimate.area || 0} m²\n\n`;
     
     message += `🛠️ *DADOS DO SERVIÇO*\n`;
     if (currentEstimate.isAiGenerated) {
@@ -208,7 +210,13 @@ export default function ResultsPage() {
     message += `\n\n_Gerado por Pintor PRO Calc_`;
 
     const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    
+    // Open in a way that respects user intent and tries to avoid blocking
+    const win = window.open(whatsappUrl, '_blank');
+    if (!win) {
+      // Fallback if blocked
+      window.location.href = whatsappUrl;
+    }
   };
   
   const handleCopyLink = () => {
@@ -251,15 +259,18 @@ export default function ResultsPage() {
         ['Contato', currentEstimate.clientPhone || 'Não informado'],
         ['Tipo de Imóvel', currentEstimate.propertyType || 'Não informado'],
         ['Localização', `${currentEstimate.neighborhood || ''}${currentEstimate.neighborhood && currentEstimate.city ? ', ' : ''}${currentEstimate.city || ''}` || 'Não informado'],
-        ['Área Total', `${currentEstimate.area} m²`],
-        ['Forma de Cobrança', currentEstimate.pricingType ? pricingLabels[currentEstimate.pricingType] : 'Não informado'],
+        ['Área Total', `${currentEstimate.area || 0} m²`],
+        ['Forma de Cobrança', currentEstimate.pricingType ? (pricingLabels[currentEstimate.pricingType] || currentEstimate.pricingType) : 'Não informado'],
         ['Tinta Inclusa', currentEstimate.includePaint ? 'Sim' : 'Não'],
       ];
 
       if (currentEstimate.productId && currentEstimate.includePaint) {
-        tableData.push(['Produto', product.name]);
+        const prod = PRODUCT_CATALOG.find(p => p.id === currentEstimate.productId) || PRODUCT_CATALOG[0];
+        tableData.push(['Produto', prod.name]);
         tableData.push(['Cor', currentEstimate.color || 'Padrão']);
-        tableData.push(['Quantidade', `${currentEstimate.packageCount} ${currentEstimate.packageSize === 'bucket' ? 'Balde(s)' : currentEstimate.packageSize === 'can' ? 'Lata(s)' : 'Litro(s)'}`]);
+        tableData.push(['Quantidade', `${currentEstimate.packageCount || 0} ${currentEstimate.packageSize === 'bucket' ? 'Balde(s)' : currentEstimate.packageSize === 'can' ? 'Lata(s)' : 'Litro(s)'}`]);
+      } else if (currentEstimate.isAiGenerated) {
+        tableData.push(['Modo Inteligente', 'Análise via Foto IA']);
       } else {
         tableData.push(['Observação', 'Cliente optou por não incluir a tinta no orçamento']);
       }
@@ -324,13 +335,14 @@ export default function ResultsPage() {
     }
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | undefined | null) => {
+    const val = typeof value === 'number' ? value : 0;
     return new Intl.NumberFormat('pt-BR', { 
       style: 'currency', 
       currency: 'BRL',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    }).format(value);
+    }).format(val);
   };
 
   return (

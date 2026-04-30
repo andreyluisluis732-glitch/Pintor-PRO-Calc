@@ -102,7 +102,10 @@ export default function SchedulePage() {
     const whatsappUrl = `https://wa.me/${phoneNum}?text=${encodeURIComponent(message)}`;
 
     if (phoneNum) {
-      window.open(whatsappUrl, '_blank');
+      const win = window.open(whatsappUrl, '_blank');
+      if (!win) {
+        window.location.href = whatsappUrl;
+      }
     }
 
     try {
